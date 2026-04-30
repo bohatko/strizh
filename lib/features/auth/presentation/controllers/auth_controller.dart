@@ -78,6 +78,7 @@ class AuthController extends AsyncNotifier<AuthState> {
     String? avatarUrl,
     String? firstName,
     String? lastName,
+    String? phoneNumber,
   }) async {
     final repository = ref.read(authRepositoryProvider);
     try {
@@ -86,6 +87,7 @@ class AuthController extends AsyncNotifier<AuthState> {
         avatarUrl: avatarUrl,
         firstName: firstName,
         lastName: lastName,
+        phoneNumber: phoneNumber,
       );
       final currentUser = await repository.getCurrentUser();
       if (currentUser != null) {

@@ -24,6 +24,7 @@ abstract class IAuthRepository {
     String? avatarUrl,
     String? firstName,
     String? lastName,
+    String? phoneNumber,
   });
 
   Future<void> deleteAccount();

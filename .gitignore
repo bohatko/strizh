@@ -5,6 +5,9 @@
 build/
 .melos_tool/
 .packages
+.pub/
+.flutter-plugins
+.flutter-plugins-dependencies
 
 # IDE
 .idea/
@@ -15,17 +18,36 @@ build/
 android/.gradle/
 android/local.properties
 android/app/*.keystore
+android/key.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
 
 # iOS
 ios/Pods/
 ios/.symlinks/
+ios/Flutter/.last_build_id
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
 ios/Flutter/flutter_export_environment.sh
+
+# macOS
+macos/Flutter/ephemeral/
+
+# Linux
+linux/flutter/ephemeral/
+
+# Windows
+windows/flutter/ephemeral/
 
 # Outputs
 *.apk
 *.aab
 *.ipa
 *.xcarchive
+app.*.symbols
+app.*.map.json
+coverage/
 
 # Env / secrets
 .env

@@ -1,180 +1,270 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:app_template/core/ui/app_snackbar.dart';
 import 'package:app_template/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:app_template/features/auth/presentation/models/auth_state.dart';
+import 'package:app_template/features/salon/presentation/widgets/salon_location_sheet.dart';
+import 'package:app_template/nav.dart';
+import 'package:app_template/supabase/supabase_config.dart';
 import 'package:app_template/theme.dart';
-import 'package:app_template/core/ui/app_snackbar.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
+
+  Future<List<Map<String, dynamic>>> _loadPopularServices() =>
+      SupabaseService.select('services', orderBy: 'created_at', ascending: false, limit: 6);
+  Future<List<Map<String, dynamic>>> _loadMasters() =>
+      SupabaseService.select('masters', orderBy: 'created_at', ascending: false, limit: 8);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
     final cs = Theme.of(context).colorScheme;
+    final authValue = authState.asData?.value;
+    final isAuthed = authValue is Authenticated;
+    final email = isAuthed ? authValue.user.email : null;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home'),
-        centerTitle: false,
-      ),
+      backgroundColor: const Color(0xFFF7F2FA),
       body: SafeArea(
-        child: authState.when(
-          data: (state) {
-            final email = state is Authenticated ? state.user.email : null;
-            return ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.xl),
+          children: [
+            Row(
               children: [
-                Text(
-                  'Welcome back',
-                  style: Theme.of(context).textTheme.headlineMedium,
+                Expanded(
+                  child: Text(
+                    'Стриж',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  email ?? '-',
-                  style: Theme.of(context).textTheme.bodyMedium?.withColor(cs.onSurfaceVariant),
+                IconButton(
+                  tooltip: 'Уведомления',
+                  onPressed: () => context.go(AppRoutes.notifications),
+                  icon: const Icon(Icons.notifications_none_rounded),
                 ),
-                const SizedBox(height: AppSpacing.xl),
-                _QuickActionCard(
-                  title: 'Create invoice',
-                  subtitle: 'Generate a draft in seconds',
-                  icon: Icons.receipt_long,
-                  onTap: () {
-                    AppSnackbar.showInfo(context, 'Not implemented yet');
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _MiniCard(
-                        title: 'Clients',
-                        value: '0',
-                        icon: Icons.people_alt_outlined,
-                        onTap: () => AppSnackbar.showInfo(context, 'Not implemented yet'),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: _MiniCard(
-                        title: 'Revenue',
-                        value: '\$0',
-                        icon: Icons.trending_up,
-                        onTap: () => AppSnackbar.showInfo(context, 'Not implemented yet'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                Text('Recent activity', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: AppSpacing.sm),
-                _EmptyStateCard(),
               ],
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Text('Error: $error', style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.center),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              isAuthed ? 'Добрый день, ${email?.split('@').first ?? 'Анна'}!' : 'Добрый день, гость!',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w700,
               ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickActionCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _QuickActionCard({required this.title, required this.subtitle, required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Material(
-      color: cs.primaryContainer.withValues(alpha: 0.35),
-      borderRadius: BorderRadius.circular(AppRadius.lg),
-      child: InkWell(
-        splashFactory: NoSplash.splashFactory,
-        highlightColor: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Row(
-            children: [
-              Container(
-                height: 52,
-                width: 52,
-                decoration: BoxDecoration(
-                  color: cs.primaryContainer,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(icon, color: cs.onPrimaryContainer),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Готовы к преображению?',
+              style: Theme.of(context).textTheme.bodyMedium?.withColor(cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFFB388FF), Color(0xFFAB7BEE)]),
+                borderRadius: BorderRadius.circular(20),
               ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 4),
-                    Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.withColor(cs.onSurfaceVariant)),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MiniCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _MiniCard({required this.title, required this.value, required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Material(
-      color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-      borderRadius: BorderRadius.circular(AppRadius.lg),
-      child: InkWell(
-        splashFactory: NoSplash.splashFactory,
-        highlightColor: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(icon, color: cs.onSurfaceVariant),
-                  const Spacer(),
-                  Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
+                  Text(
+                    '-20% СКИДКА',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Весеннее\nобновление волос',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: const Color(0xFF3B2863),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  FilledButton(
+                    style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF6E48B8)),
+                    onPressed: () => context.go(isAuthed ? AppRoutes.booking : AppRoutes.login),
+                    child: const Text('Записаться'),
+                  ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.md),
-              Text(value, style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 2),
-              Text(title, style: Theme.of(context).textTheme.bodySmall?.withColor(cs.onSurfaceVariant)),
-            ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            _SectionHeader(
+              title: 'Популярные услуги',
+              onAllTap: () => context.go(AppRoutes.services),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _loadPopularServices(),
+              builder: (context, snapshot) {
+                final services = snapshot.data ?? const [];
+                if (services.isEmpty) {
+                  return const Text('Список услуг пока пуст.');
+                }
+                return SizedBox(
+                  height: 196,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: services.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+                    itemBuilder: (context, index) {
+                      final item = services[index];
+                      return _ServiceCard(
+                        name: (item['name'] ?? 'Услуга').toString(),
+                        price: (item['price'] ?? 0).toString(),
+                        imageUrl: (item['image_url'] ?? '').toString(),
+                        onTap: () => context.go('/services/${item['id']}'),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            _SectionHeader(
+              title: 'Наши мастера',
+              onAllTap: () => context.go(AppRoutes.masters),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _loadMasters(),
+              builder: (context, snapshot) {
+                final masters = snapshot.data ?? const [];
+                if (masters.isEmpty) {
+                  return const Text('Список мастеров пока пуст.');
+                }
+                return SizedBox(
+                  height: 160,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: masters.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+                    itemBuilder: (context, index) {
+                      final item = masters[index];
+                      return _MasterChip(
+                        name: (item['specialty'] ?? 'Мастер').toString(),
+                        subtitle: (item['level'] ?? '').toString(),
+                        avatarUrl: (item['avatar_url'] ?? '').toString(),
+                        onTap: () => context.go('/masters/${item['id']}'),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _LocationTile(onTap: () => showSalonLocationSheet(context)),
+          ],
+        ),
+      ),
+      floatingActionButton: isAuthed
+          ? FloatingActionButton.extended(
+              onPressed: () => context.go(AppRoutes.booking),
+              icon: const Icon(Icons.add),
+              label: const Text('Записаться'),
+            )
+          : FloatingActionButton.extended(
+              onPressed: () {
+                AppSnackbar.showInfo(
+                  context,
+                  'Войдите в аккаунт, чтобы записаться.',
+                );
+                context.go(AppRoutes.login);
+              },
+              icon: const Icon(Icons.lock_outline),
+              label: const Text('Войти и записаться'),
+            ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final VoidCallback onAllTap;
+
+  const _SectionHeader({required this.title, required this.onAllTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ),
+        TextButton(onPressed: onAllTap, child: Text('Все', style: TextStyle(color: cs.primary))),
+      ],
+    );
+  }
+}
+
+class _ServiceCard extends StatelessWidget {
+  final String name;
+  final String price;
+  final String imageUrl;
+  final VoidCallback onTap;
+
+  const _ServiceCard({
+    required this.name,
+    required this.price,
+    required this.imageUrl,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.86),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: SizedBox(
+            width: 146,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 68,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDE8F0),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: imageUrl.isEmpty
+                        ? const Center(child: Icon(Icons.image_outlined))
+                        : Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (_, __, ___) =>
+                                const Center(child: Icon(Icons.broken_image_outlined)),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 2),
+                const Text('⭐ 4.9 (120)'),
+                const SizedBox(height: 2),
+                Text('от $price ₽', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6E48B8))),
+              ],
+            ),
           ),
         ),
       ),
@@ -182,29 +272,69 @@ class _MiniCard extends StatelessWidget {
   }
 }
 
-class _EmptyStateCard extends StatelessWidget {
+class _MasterChip extends StatelessWidget {
+  final String name;
+  final String subtitle;
+  final String avatarUrl;
+  final VoidCallback onTap;
+
+  const _MasterChip({
+    required this.name,
+    required this.subtitle,
+    required this.avatarUrl,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: SizedBox(
+        width: 92,
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 34,
+              backgroundColor: const Color(0xFFE0DDE3),
+              backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+              child: avatarUrl.isEmpty ? const Icon(Icons.person, size: 34) : null,
+            ),
+            const SizedBox(height: 8),
+            Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleSmall),
+            Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(color: const Color(0xFFF0ECF7), borderRadius: BorderRadius.circular(20)),
+              child: const Text('⭐ 5.0', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LocationTile extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _LocationTile({required this.onTap});
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: cs.outline.withValues(alpha: 0.18)),
+        color: Colors.white.withValues(alpha: 0.86),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Column(
-        children: [
-          Icon(Icons.inbox_outlined, size: 42, color: cs.onSurfaceVariant),
-          const SizedBox(height: AppSpacing.sm),
-          Text('No activity yet', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(
-            'When you create invoices or add clients, they will show up here.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall?.withColor(cs.onSurfaceVariant),
-          ),
-        ],
+      child: ListTile(
+        onTap: onTap,
+        leading: const Icon(Icons.location_on_outlined),
+        title: const Text('Локация салона'),
+        subtitle: const Text('Адрес, контакты и график работы'),
+        trailing: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
       ),
     );
   }

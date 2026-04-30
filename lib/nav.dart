@@ -5,10 +5,16 @@ import 'package:app_template/features/auth/presentation/controllers/auth_control
 import 'package:app_template/features/auth/presentation/models/auth_state.dart';
 import 'package:app_template/features/auth/presentation/pages/login_page.dart';
 import 'package:app_template/features/home/presentation/pages/home_page.dart';
-import 'package:app_template/features/search/presentation/pages/search_page.dart';
-import 'package:app_template/features/shop/presentation/pages/shop_page.dart';
+import 'package:app_template/features/booking/presentation/pages/booking_page.dart';
+import 'package:app_template/features/booking/presentation/pages/my_appointments_page.dart';
+import 'package:app_template/features/masters/presentation/pages/master_details_page.dart';
+import 'package:app_template/features/masters/presentation/pages/masters_list_page.dart';
+import 'package:app_template/features/notifications/presentation/pages/notifications_page.dart';
+import 'package:app_template/features/reviews/presentation/pages/leave_review_page.dart';
 import 'package:app_template/features/settings/presentation/pages/settings_page.dart';
 import 'package:app_template/features/settings/presentation/pages/profile_page.dart';
+import 'package:app_template/features/services/presentation/pages/service_details_page.dart';
+import 'package:app_template/features/services/presentation/pages/services_list_page.dart';
 
 /// GoRouter configuration for app navigation
 ///
@@ -30,16 +36,23 @@ class AppRouter {
       refreshListenable: ref.watch(routerRefreshNotifierProvider),
       redirect: (context, state) {
         final auth = ref.read(authControllerProvider);
-
-        final isLogin = state.matchedLocation == AppRoutes.login;
+        final location = state.matchedLocation;
         final isSplashLike = auth.isLoading;
+        final isLogin = location == AppRoutes.login;
+        final protectedRoutes = <String>{
+          AppRoutes.booking,
+          AppRoutes.myAppointments,
+          AppRoutes.profile,
+          AppRoutes.settings,
+        };
+        final isProtected = protectedRoutes.any(location.startsWith);
 
         if (isSplashLike) return null;
 
         final authValue = auth.asData?.value;
         final isAuthed = authValue is Authenticated;
 
-        if (!isAuthed && !isLogin) return AppRoutes.login;
+        if (!isAuthed && isProtected) return AppRoutes.login;
         if (isAuthed && isLogin) return AppRoutes.home;
         return null;
       },
@@ -58,14 +71,24 @@ class AppRouter {
               pageBuilder: (context, state) => const NoTransitionPage(child: HomePage()),
             ),
             GoRoute(
-              path: AppRoutes.shop,
-              name: 'shop',
-              pageBuilder: (context, state) => const NoTransitionPage(child: ShopPage()),
+              path: AppRoutes.masters,
+              name: 'masters',
+              pageBuilder: (context, state) => const NoTransitionPage(child: MastersListPage()),
             ),
             GoRoute(
-              path: AppRoutes.search,
-              name: 'search',
-              pageBuilder: (context, state) => const NoTransitionPage(child: SearchPage()),
+              path: AppRoutes.services,
+              name: 'services',
+              pageBuilder: (context, state) => const NoTransitionPage(child: ServicesListPage()),
+            ),
+            GoRoute(
+              path: AppRoutes.myAppointments,
+              name: 'my-appointments',
+              pageBuilder: (context, state) => const NoTransitionPage(child: MyAppointmentsPage()),
+            ),
+            GoRoute(
+              path: AppRoutes.notifications,
+              name: 'notifications',
+              pageBuilder: (context, state) => const NoTransitionPage(child: NotificationsPage()),
             ),
             GoRoute(
               path: AppRoutes.profile,
@@ -76,6 +99,50 @@ class AppRouter {
               path: AppRoutes.settings,
               name: 'settings',
               pageBuilder: (context, state) => const NoTransitionPage(child: SettingsPage()),
+            ),
+            GoRoute(
+              path: AppRoutes.masterDetails,
+              name: 'master-details',
+              builder: (context, state) {
+                final rawMasterId = state.pathParameters['masterId'];
+                final masterId = int.tryParse(rawMasterId ?? '');
+                if (masterId == null) {
+                  return const Scaffold(body: Center(child: Text('Master not found')));
+                }
+                return MasterDetailsPage(masterId: masterId);
+              },
+            ),
+            GoRoute(
+              path: AppRoutes.serviceDetails,
+              name: 'service-details',
+              builder: (context, state) {
+                final rawServiceId = state.pathParameters['serviceId'];
+                final serviceId = int.tryParse(rawServiceId ?? '');
+                if (serviceId == null) {
+                  return const Scaffold(body: Center(child: Text('Service not found')));
+                }
+                return ServiceDetailsPage(serviceId: serviceId);
+              },
+            ),
+            GoRoute(
+              path: AppRoutes.booking,
+              name: 'booking',
+              builder: (context, state) => BookingPage(
+                masterId: int.tryParse(state.uri.queryParameters['masterId'] ?? ''),
+                serviceId: int.tryParse(state.uri.queryParameters['serviceId'] ?? ''),
+              ),
+            ),
+            GoRoute(
+              path: AppRoutes.leaveReview,
+              name: 'leave-review',
+              builder: (context, state) {
+                final rawAppointmentId = state.pathParameters['appointmentId'];
+                final appointmentId = int.tryParse(rawAppointmentId ?? '');
+                if (appointmentId == null) {
+                  return const Scaffold(body: Center(child: Text('Appointment not found')));
+                }
+                return LeaveReviewPage(appointmentId: appointmentId);
+              },
             ),
           ],
         ),
@@ -89,8 +156,14 @@ class AppRouter {
 class AppRoutes {
   static const String login = '/login';
   static const String home = '/home';
-  static const String shop = '/shop';
-  static const String search = '/search';
+  static const String masters = '/masters';
+  static const String services = '/services';
+  static const String masterDetails = '/masters/:masterId';
+  static const String serviceDetails = '/services/:serviceId';
+  static const String booking = '/booking';
+  static const String myAppointments = '/my-appointments';
+  static const String notifications = '/notifications';
+  static const String leaveReview = '/appointments/:appointmentId/review';
   static const String profile = '/profile';
   static const String settings = '/settings';
 }
@@ -113,8 +186,8 @@ class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.child});
 
   int _indexForLocation(String location) {
-    if (location.startsWith(AppRoutes.shop)) return 1;
-    if (location.startsWith(AppRoutes.search)) return 2;
+    if (location.startsWith('/services')) return 1;
+    if (location.startsWith(AppRoutes.myAppointments)) return 2;
     if (location.startsWith(AppRoutes.profile)) return 3;
     return 0;
   }
@@ -125,10 +198,10 @@ class AppShell extends StatelessWidget {
         context.go(AppRoutes.home);
         return;
       case 1:
-        context.go(AppRoutes.shop);
+        context.go(AppRoutes.services);
         return;
       case 2:
-        context.go(AppRoutes.search);
+        context.go(AppRoutes.myAppointments);
         return;
       case 3:
         context.go(AppRoutes.profile);
@@ -140,6 +213,9 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     final index = _indexForLocation(location);
+    final hideBottomNav = location == AppRoutes.services ||
+        location.startsWith('/services/') ||
+        location.startsWith(AppRoutes.booking);
 
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
@@ -150,57 +226,60 @@ class AppShell extends StatelessWidget {
         cs.shadow.withValues(alpha: isDark ? 0.6 : 0.04);
     return Scaffold(
       body: child,
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Container(
-          height: 88,
-          decoration: BoxDecoration(
-            color: barColor,
-            border: Border(
-              top: BorderSide(
-                color: cs.outline.withValues(alpha: 0.15),
-                width: 1,
+      bottomNavigationBar: hideBottomNav
+          ? null
+          : SafeArea(
+              top: false,
+              child: Container(
+                height: 92,
+                decoration: BoxDecoration(
+                  color: barColor,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  border: Border(
+                    top: BorderSide(
+                      color: cs.outline.withValues(alpha: 0.15),
+                      width: 1,
+                    ),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: shadowColor,
+                      blurRadius: 16,
+                      offset: const Offset(0, -4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _BottomNavItem(
+                      icon: Icons.home_rounded,
+                      label: 'Главная',
+                      isActive: index == 0,
+                      onTap: () => _onTap(context, 0),
+                    ),
+                    _BottomNavItem(
+                      icon: Icons.grid_view_rounded,
+                      label: 'Услуги',
+                      isActive: index == 1,
+                      onTap: () => _onTap(context, 1),
+                    ),
+                    _BottomNavItem(
+                      icon: Icons.calendar_today_rounded,
+                      label: 'Записи',
+                      isActive: index == 2,
+                      onTap: () => _onTap(context, 2),
+                    ),
+                    _BottomNavItem(
+                      icon: Icons.person_outline_rounded,
+                      label: 'Профиль',
+                      isActive: index == 3,
+                      onTap: () => _onTap(context, 3),
+                    ),
+                  ],
+                ),
               ),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: shadowColor,
-                blurRadius: 16,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _BottomNavItem(
-                icon: Icons.home_rounded,
-                label: 'Home',
-                isActive: index == 0,
-                onTap: () => _onTap(context, 0),
-              ),
-              _BottomNavItem(
-                icon: Icons.storefront_rounded,
-                label: 'Shop',
-                isActive: index == 1,
-                onTap: () => _onTap(context, 1),
-              ),
-              _BottomNavItem(
-                icon: Icons.search_rounded,
-                label: 'Search',
-                isActive: index == 2,
-                onTap: () => _onTap(context, 2),
-              ),
-              _BottomNavItem(
-                icon: Icons.person_rounded,
-                label: 'Profile',
-                isActive: index == 3,
-                onTap: () => _onTap(context, 3),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -232,8 +311,7 @@ class _BottomNavItemState extends State<_BottomNavItem> {
     final inactiveColor = cs.onSurfaceVariant;
 
     final bool isActive = widget.isActive;
-    final Color iconColor =
-        isActive ? cs.onPrimary : (_isHovered ? activeColor : inactiveColor);
+    final Color iconColor = isActive ? activeColor : (_isHovered ? activeColor : inactiveColor);
     final Color labelColor =
         isActive ? activeColor : (_isHovered ? activeColor : inactiveColor);
 
@@ -250,25 +328,12 @@ class _BottomNavItemState extends State<_BottomNavItem> {
               AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOut,
-                height: isActive ? 32 : 24,
-                width: isActive ? 32 : 24,
-                decoration: isActive
-                    ? BoxDecoration(
-                        color: activeColor,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: activeColor.withValues(alpha: 0.35),
-                            offset: const Offset(0, 6),
-                            blurRadius: 16,
-                          ),
-                        ],
-                      )
-                    : null,
+                height: 26,
+                width: 26,
                 alignment: Alignment.center,
                 child: Icon(
                   widget.icon,
-                  size: 20,
+                  size: 25,
                   color: iconColor,
                 ),
               ),
@@ -276,7 +341,7 @@ class _BottomNavItemState extends State<_BottomNavItem> {
               Text(
                 widget.label,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.w400,
                   color: labelColor,
                 ),

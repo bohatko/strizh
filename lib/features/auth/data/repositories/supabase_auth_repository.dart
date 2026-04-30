@@ -144,11 +144,13 @@ class SupabaseAuthRepository implements IAuthRepository {
     String? avatarUrl,
     String? firstName,
     String? lastName,
+    String? phoneNumber,
   }) async {
     try {
       final updates = <String, dynamic>{};
       if (displayName != null) updates['display_name'] = displayName;
       if (avatarUrl != null) updates['avatar_url'] = avatarUrl;
+      if (phoneNumber != null) updates['phone'] = phoneNumber;
 
       final current = _client.auth.currentUser;
       if (current == null) {
@@ -162,15 +164,33 @@ class SupabaseAuthRepository implements IAuthRepository {
       if (avatarUrl != null) profileUpdates['avatar_url'] = avatarUrl;
       if (firstName != null) profileUpdates['first_name'] = firstName;
       if (lastName != null) profileUpdates['last_name'] = lastName;
+      if (phoneNumber != null) profileUpdates['phone'] = phoneNumber;
 
       if (profileUpdates.isNotEmpty) {
-        await _client
-            .from(_profilesTable)
-            .update({
-              ...profileUpdates,
-              'updated_at': DateTime.now().toIso8601String(),
-            })
-            .eq('id', current.id);
+        try {
+          await _client
+              .from(_profilesTable)
+              .update({
+                ...profileUpdates,
+                'updated_at': DateTime.now().toIso8601String(),
+              })
+              .eq('id', current.id);
+        } on PostgrestException catch (e) {
+          final isMissingPhoneColumn = e.code == 'PGRST204' &&
+              e.message.contains("Could not find the 'phone' column");
+          if (!isMissingPhoneColumn) rethrow;
+
+          profileUpdates.remove('phone');
+          if (profileUpdates.isNotEmpty) {
+            await _client
+                .from(_profilesTable)
+                .update({
+                  ...profileUpdates,
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
+                .eq('id', current.id);
+          }
+        }
       }
     } on AuthException catch (e) {
       AppLogger.warning('Supabase profile update error', error: e.message);
