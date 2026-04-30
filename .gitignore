@@ -1,0 +1,38 @@
+# Flutter / Dart
+.buildlog/
+.dart_tool/
+.build/
+build/
+.melos_tool/
+.packages
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Android
+android/.gradle/
+android/local.properties
+android/app/*.keystore
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/flutter_export_environment.sh
+
+# Outputs
+*.apk
+*.aab
+*.ipa
+*.xcarchive
+
+# Env / secrets
+.env
+.env.*
+lib/env/env.dart
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

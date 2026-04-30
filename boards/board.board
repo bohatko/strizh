@@ -1,0 +1,14 @@
+{
+    "canvases": [
+        {
+            "x": 335.0,
+            "y": 107.0,
+            "w": 393.0,
+            "h": 808.0,
+            "widget": "const NovaScreen()",
+            "deps": [
+                "lib/pages/nova_screen.dart"
+            ]
+        }
+    ]
+}
