@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:app_template/core/ui/admin_access_icon.dart';
 import 'package:app_template/nav.dart';
 import 'package:app_template/supabase/supabase_config.dart';
 import 'package:app_template/theme.dart';
@@ -32,8 +33,11 @@ class _MastersListPageState extends State<MastersListPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: const Color(0xFFFEF7FF),
-      appBar: AppBar(title: const Text('Наши мастера')),
+      backgroundColor: cs.surface,
+      appBar: AppBar(
+        leading: const AdminAccessIcon(),
+        title: const Text('Наши мастера'),
+      ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _mastersFuture,
         builder: (context, snapshot) {
@@ -125,7 +129,7 @@ class _MasterTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Material(
-      color: Colors.white.withValues(alpha: 0.92),
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
       borderRadius: BorderRadius.circular(AppRadius.lg),
       child: InkWell(
         onTap: onTap,

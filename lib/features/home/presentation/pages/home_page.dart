@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:app_template/core/ui/admin_access_icon.dart';
 import 'package:app_template/core/ui/app_snackbar.dart';
 import 'package:app_template/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:app_template/features/auth/presentation/models/auth_state.dart';
@@ -60,13 +61,14 @@ class HomePage extends ConsumerWidget {
     final email = isAuthed ? authValue.user.email : null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F2FA),
+      backgroundColor: cs.surface,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.xl),
           children: [
             Row(
               children: [
+                const AdminAccessIcon(),
                 Expanded(
                   child: Text(
                     'Стриж',
@@ -108,7 +110,7 @@ class HomePage extends ConsumerWidget {
                   Text(
                     '-20% СКИДКА',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: Colors.black.withValues(alpha: 0.6),
+                      color: Colors.white.withValues(alpha: 0.85),
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -116,13 +118,16 @@ class HomePage extends ConsumerWidget {
                   Text(
                     'Весеннее\nобновление волос',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: const Color(0xFF3B2863),
+                      color: Colors.white,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF6E48B8)),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: cs.surface,
+                      foregroundColor: cs.primary,
+                    ),
                     onPressed: () => context.go(isAuthed ? AppRoutes.booking : AppRoutes.login),
                     child: const Text('Записаться'),
                   ),
@@ -138,6 +143,9 @@ class HomePage extends ConsumerWidget {
             FutureBuilder<List<Map<String, dynamic>>>(
               future: _loadPopularServices(),
               builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const _ServicesShimmerRow();
+                }
                 final services = snapshot.data ?? const [];
                 if (services.isEmpty) {
                   return const Text('Список услуг пока пуст.');
@@ -172,6 +180,9 @@ class HomePage extends ConsumerWidget {
             FutureBuilder<List<Map<String, dynamic>>>(
               future: _loadMasters(),
               builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const _MastersShimmerRow();
+                }
                 final masters = snapshot.data ?? const [];
                 if (masters.isEmpty) {
                   return const Text('Список мастеров пока пуст.');
@@ -261,8 +272,9 @@ class _ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Material(
-      color: Colors.white.withValues(alpha: 0.86),
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.55),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -277,7 +289,7 @@ class _ServiceCard extends StatelessWidget {
                 Container(
                   height: 68,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEDE8F0),
+                    color: cs.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: ClipRRect(
@@ -309,7 +321,13 @@ class _ServiceCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text('от $price ₽', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6E48B8))),
+                Text(
+                  'от $price ₽',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: cs.primary,
+                  ),
+                ),
               ],
             ),
           ),
@@ -334,6 +352,7 @@ class _MasterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
@@ -343,7 +362,7 @@ class _MasterChip extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 34,
-              backgroundColor: const Color(0xFFE0DDE3),
+              backgroundColor: cs.surfaceContainerHighest,
               backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
               child: avatarUrl.isEmpty ? const Icon(Icons.person, size: 34) : null,
             ),
@@ -353,7 +372,10 @@ class _MasterChip extends StatelessWidget {
             const SizedBox(height: 4),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(color: const Color(0xFFF0ECF7), borderRadius: BorderRadius.circular(20)),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: const Text('⭐ 5.0', style: TextStyle(fontSize: 12)),
             ),
           ],
@@ -373,7 +395,7 @@ class _LocationTile extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.86),
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(16),
       ),
       child: ListTile(
@@ -383,6 +405,159 @@ class _LocationTile extends StatelessWidget {
         subtitle: const Text('Адрес, контакты и график работы'),
         trailing: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
       ),
+    );
+  }
+}
+
+class _ServicesShimmerRow extends StatelessWidget {
+  const _ServicesShimmerRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 196,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: 3,
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+        itemBuilder: (_, __) => const _ServiceShimmerCard(),
+      ),
+    );
+  }
+}
+
+class _ServiceShimmerCard extends StatelessWidget {
+  const _ServiceShimmerCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: 146,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _HomeShimmerBlock(width: double.infinity, height: 68, borderRadius: 12),
+          SizedBox(height: AppSpacing.sm),
+          _HomeShimmerBlock(width: 104, height: 14, borderRadius: 6),
+          SizedBox(height: 6),
+          _HomeShimmerBlock(width: 90, height: 12, borderRadius: 6),
+          SizedBox(height: 6),
+          _HomeShimmerBlock(width: 72, height: 14, borderRadius: 6),
+        ],
+      ),
+    );
+  }
+}
+
+class _MastersShimmerRow extends StatelessWidget {
+  const _MastersShimmerRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 160,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: 5,
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+        itemBuilder: (_, __) => const _MasterShimmerChip(),
+      ),
+    );
+  }
+}
+
+class _MasterShimmerChip extends StatelessWidget {
+  const _MasterShimmerChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 92,
+      child: Column(
+        children: [
+          _HomeShimmerBlock(width: 68, height: 68, borderRadius: 34),
+          SizedBox(height: 8),
+          _HomeShimmerBlock(width: 72, height: 12, borderRadius: 6),
+          SizedBox(height: 6),
+          _HomeShimmerBlock(width: 60, height: 11, borderRadius: 6),
+          SizedBox(height: 6),
+          _HomeShimmerBlock(width: 48, height: 16, borderRadius: 10),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeShimmerBlock extends StatefulWidget {
+  final double width;
+  final double height;
+  final double borderRadius;
+
+  const _HomeShimmerBlock({
+    required this.width,
+    required this.height,
+    required this.borderRadius,
+  });
+
+  @override
+  State<_HomeShimmerBlock> createState() => _HomeShimmerBlockState();
+}
+
+class _HomeShimmerBlockState extends State<_HomeShimmerBlock>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final base = cs.surfaceContainerHighest.withValues(alpha: 0.65);
+    final highlight = cs.surface.withValues(alpha: 0.95);
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final t = _controller.value;
+        return ShaderMask(
+          blendMode: BlendMode.srcATop,
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              begin: Alignment(-1.2 + (2.4 * t), 0),
+              end: Alignment(-0.2 + (2.4 * t), 0),
+              colors: [base, highlight, base],
+              stops: const [0.0, 0.5, 1.0],
+            ).createShader(bounds);
+          },
+          child: Container(
+            width: widget.width,
+            height: widget.height,
+            decoration: BoxDecoration(
+              color: base,
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+            ),
+          ),
+        );
+      },
     );
   }
 }

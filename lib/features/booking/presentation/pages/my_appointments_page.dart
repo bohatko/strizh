@@ -16,8 +16,6 @@ class MyAppointmentsPage extends ConsumerStatefulWidget {
 }
 
 class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
-  static const _bgColor = Color(0xFFF6F1FA);
-  static const _cardColor = Color(0xFFFBFAFD);
   static const _accent = Color(0xFF6D4EA2);
   static const _textPrimary = Color(0xFF1D1A20);
   static const _textSecondary = Color(0xFF5E5965);
@@ -136,6 +134,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
   Widget build(BuildContext context) {
     final authValue = ref.watch(authControllerProvider).asData?.value;
     final isAuthed = authValue is Authenticated;
+    final cs = Theme.of(context).colorScheme;
 
     if (!isAuthed) {
       return Scaffold(
@@ -164,7 +163,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
     }
 
     return Scaffold(
-      backgroundColor: _bgColor,
+      backgroundColor: cs.surface,
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _appointmentsFuture,
         builder: (context, snapshot) {
@@ -186,10 +185,10 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
             children: [
-              const Text(
+              Text(
                 'Мои записи',
                 style: TextStyle(
-                  color: _textPrimary,
+                  color: cs.onSurface,
                   fontSize: 16,
                   height: 1.05,
                   fontWeight: FontWeight.w700,
@@ -205,7 +204,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
                     _showUpcoming
                         ? 'Нет предстоящих записей'
                         : 'История записей пока пуста',
-                    style: const TextStyle(color: _textSecondary, fontSize: 14),
+                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
                   ),
                 ),
               ...visible.map((item) {
@@ -220,7 +219,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
                   margin: const EdgeInsets.only(bottom: 14),
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
                   decoration: BoxDecoration(
-                    color: _cardColor,
+                    color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -236,8 +235,8 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
                                 const SizedBox(height: 10),
                                 Text(
                                   (service?['name'] ?? 'Услуга').toString(),
-                                  style: const TextStyle(
-                                    color: _textPrimary,
+                                  style: TextStyle(
+                                    color: cs.onSurface,
                                     fontSize: 14,
                                     height: 1.1,
                                     fontWeight: FontWeight.w700,
@@ -246,17 +245,17 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
                                 const SizedBox(height: 8),
                                 Row(
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       Icons.person_outline_rounded,
                                       size: 18,
-                                      color: _textSecondary,
+                                      color: cs.onSurfaceVariant,
                                     ),
                                     const SizedBox(width: 4),
                                     Expanded(
                                       child: Text(
                                         (master?['specialty'] ?? 'Мастер').toString(),
-                                        style: const TextStyle(
-                                          color: _textSecondary,
+                                        style: TextStyle(
+                                          color: cs.onSurfaceVariant,
                                           fontSize: 14,
                                         ),
                                       ),
@@ -272,8 +271,8 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
                             children: [
                               Text(
                                 _timeLabel(dt),
-                                style: const TextStyle(
-                                  color: _accent,
+                                style: TextStyle(
+                                  color: cs.primary,
                                   fontSize: 14,
                                   height: 0.9,
                                   fontWeight: FontWeight.w700,
@@ -282,8 +281,8 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
                               const SizedBox(height: 2),
                               Text(
                                 _dateLabel(dt),
-                                style: const TextStyle(
-                                  color: _textSecondary,
+                                style: TextStyle(
+                                  color: cs.onSurfaceVariant,
                                   fontSize: 14,
                                 ),
                               ),
@@ -292,7 +291,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
                         ],
                       ),
                       const SizedBox(height: 14),
-                      const Divider(color: Color(0xFFE0DCE5)),
+                      Divider(color: cs.outline.withValues(alpha: 0.25)),
                       const SizedBox(height: 8),
                       if (canCancel)
                         Align(
@@ -328,10 +327,11 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
   }
 
   Widget _buildTabs() {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-        color: const Color(0xFFE9E2EE),
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -360,6 +360,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
     required bool active,
     required VoidCallback onTap,
   }) {
+    final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -367,14 +368,14 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
         curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: active ? Colors.white : Colors.transparent,
+          color: active ? cs.surface : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
         ),
         alignment: Alignment.center,
         child: Text(
           label,
           style: TextStyle(
-            color: active ? _accent : _textPrimary,
+            color: active ? cs.primary : cs.onSurface,
             fontSize: 14,
             fontWeight: FontWeight.w700,
           ),

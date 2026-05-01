@@ -61,20 +61,6 @@ class _MasterDetailsPageState extends State<MasterDetailsPage> {
     return '$day $month $year в $hour:$minute';
   }
 
-  Future<void> _showSalonInfoSheet() {
-    final cs = Theme.of(context).colorScheme;
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: cs.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
-      ),
-      builder: (context) => const _SalonInfoSheet(),
-    );
-  }
-
   void _handleBack() {
     if (context.canPop()) {
       context.pop();
@@ -87,7 +73,7 @@ class _MasterDetailsPageState extends State<MasterDetailsPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: const Color(0xFFFEF7FF),
+      backgroundColor: cs.surface,
       appBar: AppBar(title: const Text('Профиль мастера')),
       body: FutureBuilder<Map<String, dynamic>?>(
         future: _masterFuture,
@@ -208,7 +194,7 @@ class _MasterDetailsPageState extends State<MasterDetailsPage> {
                         AppSpacing.lg,
                         AppSpacing.lg,
                         AppSpacing.lg,
-                        AppSpacing.xxl,
+                        120,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,7 +205,7 @@ class _MasterDetailsPageState extends State<MasterDetailsPage> {
                             width: double.infinity,
                             padding: const EdgeInsets.all(AppSpacing.md),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.88),
+                              color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
                               borderRadius: BorderRadius.circular(AppRadius.lg),
                             ),
                             child: Text(
@@ -227,30 +213,6 @@ class _MasterDetailsPageState extends State<MasterDetailsPage> {
                                   ? 'Опытный мастер салона, поможет подобрать подходящую услугу.'
                                   : bio,
                               style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          InkWell(
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                            onTap: _showSalonInfoSheet,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.location_on_outlined,
-                                    size: 18,
-                                    color: cs.onSurfaceVariant,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Минск, ул. Центральная, 12',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall?.withColor(cs.onSurfaceVariant),
-                                  ),
-                                ],
-                              ),
                             ),
                           ),
                           const SizedBox(height: AppSpacing.lg),
@@ -329,7 +291,7 @@ class _MasterDetailsPageState extends State<MasterDetailsPage> {
                                   return Container(
                                     margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.9),
+                                      color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
                                       borderRadius: BorderRadius.circular(AppRadius.lg),
                                     ),
                                     child: ListTile(
@@ -381,7 +343,7 @@ class _MasterDetailsPageState extends State<MasterDetailsPage> {
                                   margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                                   padding: const EdgeInsets.all(AppSpacing.md),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.9),
+                                    color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
                                     borderRadius: BorderRadius.circular(AppRadius.lg),
                                   ),
                                   child: Column(
@@ -430,280 +392,6 @@ class _MasterDetailsPageState extends State<MasterDetailsPage> {
         ),
         icon: const Icon(Icons.calendar_month_outlined),
         label: const Text('Записаться'),
-      ),
-    );
-  }
-}
-
-class _SalonInfoSheet extends StatelessWidget {
-  const _SalonInfoSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.xxl,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Свяжитесь с нами',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Мы всегда рады помочь вам с выбором услуг и ответить на любые вопросы.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.withColor(cs.onSurfaceVariant),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Row(
-            children: [
-              Expanded(
-                child: _ContactCard(
-                  title: 'Телефон',
-                  subtitle: 'Ответим на ваши звонки',
-                  icon: Icons.phone,
-                  content: '+7 (999) 123-45-67',
-                  actionLabel: 'Позвонить',
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: _ScheduleCard(
-                  title: 'Режим работы',
-                  subtitle: 'Ждем вас каждый день',
-                  icon: Icons.schedule,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: cs.surfaceContainerHighest,
-                child: Icon(
-                  Icons.location_on,
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Наш адрес',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'г. Минск, ул. Центральная, д. 12',
-                      style: Theme.of(context).textTheme.bodyMedium?.withColor(
-                        cs.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Container(
-            height: 180,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-              image: const DecorationImage(
-                image: NetworkImage(
-                  'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&q=80&auto=format&fit=crop',
-                ),
-                fit: BoxFit.cover,
-              ),
-            ),
-            child: Center(
-              child: Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFB388FF),
-                  borderRadius: BorderRadius.circular(999),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 18,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.location_on, color: Colors.white, size: 36),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ContactCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final String content;
-  final String actionLabel;
-
-  const _ContactCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.content,
-    required this.actionLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: const Color(0xFFB388FF).withValues(alpha: 0.3),
-                child: Icon(icon, size: 18, color: const Color(0xFF6D4EA2)),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleMedium),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.withColor(
-                        cs.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            content,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFB388FF),
-              minimumSize: const Size(double.infinity, 42),
-            ),
-            onPressed: () {},
-            icon: const Icon(Icons.phone_outlined, size: 18),
-            label: Text(actionLabel),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ScheduleCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-
-  const _ScheduleCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: cs.surface,
-                child: Icon(icon, size: 18, color: cs.onSurfaceVariant),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleMedium),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.withColor(
-                        cs.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          const _TimeRow(dayRange: 'Пн - Пт', time: '10:00 - 22:00'),
-          Divider(color: cs.outline.withValues(alpha: 0.2)),
-          const _TimeRow(dayRange: 'Сб - Вс', time: '11:00 - 21:00'),
-        ],
-      ),
-    );
-  }
-}
-
-class _TimeRow extends StatelessWidget {
-  final String dayRange;
-  final String time;
-
-  const _TimeRow({required this.dayRange, required this.time});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Text(dayRange),
-          const Spacer(),
-          Text(time, style: const TextStyle(fontWeight: FontWeight.w700)),
-        ],
       ),
     );
   }

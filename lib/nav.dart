@@ -15,6 +15,7 @@ import 'package:app_template/features/settings/presentation/pages/settings_page.
 import 'package:app_template/features/settings/presentation/pages/profile_page.dart';
 import 'package:app_template/features/services/presentation/pages/service_details_page.dart';
 import 'package:app_template/features/services/presentation/pages/services_list_page.dart';
+import 'package:app_template/features/admin/presentation/pages/admin_panel_page.dart';
 
 /// GoRouter configuration for app navigation
 ///
@@ -51,8 +52,12 @@ class AppRouter {
 
         final authValue = auth.asData?.value;
         final isAuthed = authValue is Authenticated;
+        final isAdmin = authValue is Authenticated &&
+            authValue.user.role?.toLowerCase() == 'admin';
+        final isAdminRoute = location.startsWith(AppRoutes.adminPanel);
 
         if (!isAuthed && isProtected) return AppRoutes.login;
+        if (isAdminRoute && !isAdmin) return AppRoutes.home;
         if (isAuthed && isLogin) return AppRoutes.home;
         return null;
       },
@@ -99,6 +104,11 @@ class AppRouter {
               path: AppRoutes.settings,
               name: 'settings',
               pageBuilder: (context, state) => const NoTransitionPage(child: SettingsPage()),
+            ),
+            GoRoute(
+              path: AppRoutes.adminPanel,
+              name: 'admin-panel',
+              pageBuilder: (context, state) => const NoTransitionPage(child: AdminPanelPage()),
             ),
             GoRoute(
               path: AppRoutes.masterDetails,
@@ -166,6 +176,7 @@ class AppRoutes {
   static const String leaveReview = '/appointments/:appointmentId/review';
   static const String profile = '/profile';
   static const String settings = '/settings';
+  static const String adminPanel = '/admin';
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) => AppRouter.createRouter(ref));

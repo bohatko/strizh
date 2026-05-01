@@ -65,8 +65,9 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: const Color(0xFFFEF7FF),
+      backgroundColor: cs.surface,
       body: FutureBuilder<Map<String, dynamic>?>(
         future: _serviceFuture,
         builder: (context, snapshot) {
@@ -109,20 +110,20 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
                       height: 320,
                       width: double.infinity,
                       child: imageUrl.isEmpty
-                          ? const ColoredBox(color: Color(0xFFF8F1FA))
+                          ? ColoredBox(color: cs.surfaceContainerHighest)
                           : Image.network(
                               imageUrl,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) =>
-                                  const ColoredBox(color: Color(0xFFF8F1FA)),
+                                  ColoredBox(color: cs.surfaceContainerHighest),
                             ),
                     ),
                     Transform.translate(
                       offset: const Offset(0, -32),
                       child: Container(
                         width: double.infinity,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFEF7FF),
+                        decoration: BoxDecoration(
+                          color: cs.surface,
                           borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
                         ),
                         padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
@@ -136,7 +137,7 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
                                     height: 1.25,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: -0.5,
-                                    color: const Color(0xFF1D1A20),
+                                    color: cs.onSurface,
                                   ),
                             ),
                             const SizedBox(height: 8),
@@ -147,12 +148,12 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
                                 const SizedBox(width: 4),
                                 Text(
                                   avg ?? '-',
-                                  style: TextStyle(fontSize: 16, color: Color(0xFF1D1A20)),
+                                  style: TextStyle(fontSize: 16, color: cs.onSurface),
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '($count)',
-                                  style: TextStyle(fontSize: 16, color: Color(0xFF7B7581)),
+                                  style: TextStyle(fontSize: 16, color: cs.onSurfaceVariant),
                                 ),
                                 const SizedBox(width: 12),
                                 const _DotDivider(),
@@ -162,9 +163,9 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
                                 const SizedBox(width: 4),
                                 Text(
                                   '$duration min',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 16,
-                                    color: Color(0xFF4A4550),
+                                    color: cs.onSurfaceVariant,
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -172,10 +173,10 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
                                 const SizedBox(width: 12),
                                 Text(
                                   '$price ₽',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFF6D4EA2),
+                                    color: cs.primary,
                                   ),
                                 ),
                               ],
@@ -183,21 +184,21 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
                             const SizedBox(height: 22),
                             Text(
                               description,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
                                 height: 1.5,
-                                color: Color(0xFF4A4550),
+                                color: cs.onSurfaceVariant,
                               ),
                             ),
                             const SizedBox(height: 26),
-                            const Text(
+                            Text(
                               'Доступные специалисты',
                               style: TextStyle(
                                 fontSize: 16,
                                 height: 1.2,
                                 fontWeight: FontWeight.w600,
                                 letterSpacing: -0.2,
-                                color: Color(0xFF1D1A20),
+                                color: cs.onSurface,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -281,18 +282,18 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
                     height: 64,
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      border: const Border(
-                        bottom: BorderSide(color: Color(0xFFF4F4F5)),
+                      color: cs.surface.withValues(alpha: 0.9),
+                      border: Border(
+                        bottom: BorderSide(color: cs.outline.withValues(alpha: 0.2)),
                       ),
                     ),
                     child: Row(
                       children: [
                         IconButton(
                           onPressed: () => context.go(AppRoutes.services),
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.arrow_back_rounded,
-                            color: Color(0xFFC5A3FF),
+                            color: cs.primary,
                           ),
                         ),
                         Expanded(
@@ -300,16 +301,16 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
                             'Стриж',
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  color: const Color(0xFF18181B),
+                                  color: cs.onSurface,
                                   fontWeight: FontWeight.w700,
                                 ),
                           ),
                         ),
                         IconButton(
                           onPressed: () => context.go(AppRoutes.notifications),
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.notifications_none_rounded,
-                            color: Color(0xFFC5A3FF),
+                            color: cs.primary,
                           ),
                         ),
                       ],
@@ -328,8 +329,8 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
                       '${AppRoutes.booking}?serviceId=${widget.serviceId}',
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFC5A3FF),
-                      foregroundColor: const Color(0xFF533487),
+                      backgroundColor: cs.primaryContainer,
+                      foregroundColor: cs.onPrimaryContainer,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -385,8 +386,9 @@ class _MasterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Material(
-      color: const Color(0xFFF8F1FA),
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
@@ -403,18 +405,17 @@ class _MasterCard extends StatelessWidget {
                 decoration: const BoxDecoration(shape: BoxShape.circle),
                 child: imageUrl == null
                     ? Container(
-                        color: const Color(0xFFE7E0E8),
+                        color: cs.surfaceContainerHighest,
                         child: const Icon(
                           Icons.person_outline,
                           size: 28,
-                          color: Color(0xFF4A4550),
                         ),
                       )
                     : Image.network(
                         imageUrl!,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(
-                          color: const Color(0xFFE7E0E8),
+                          color: cs.surfaceContainerHighest,
                           child: const Icon(Icons.person_outline),
                         ),
                       ),
@@ -427,7 +428,6 @@ class _MasterCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 16,
-                  color: Color(0xFF1D1A20),
                 ),
               ),
               const SizedBox(height: 6),
@@ -438,7 +438,6 @@ class _MasterCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 12,
-                  color: Color(0xFF4A4550),
                 ),
               ),
               if (rating != null) ...[
@@ -456,7 +455,6 @@ class _MasterCard extends StatelessWidget {
                       rating ?? '-',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF4A4550),
                       ),
                     ),
                   ],

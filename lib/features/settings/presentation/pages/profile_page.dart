@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
+import 'package:app_template/core/ui/admin_access_icon.dart';
 import 'package:app_template/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:app_template/features/auth/presentation/models/auth_state.dart';
 import 'package:app_template/core/providers/theme_provider.dart';
@@ -350,7 +351,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const SizedBox(width: 48),
+                  const AdminAccessIcon(),
                   Text(
                     'Профиль',
                     style: Theme.of(context).textTheme.titleLarge,

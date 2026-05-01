@@ -1,4 +1,5 @@
 import 'package:app_template/nav.dart';
+import 'package:app_template/core/ui/admin_access_icon.dart';
 import 'package:app_template/supabase/supabase_config.dart';
 import 'package:app_template/theme.dart';
 import 'package:flutter/material.dart';
@@ -90,17 +91,18 @@ class _ServicesListPageState extends State<ServicesListPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: const Color(0xFFFEF7FF),
+      backgroundColor: cs.surface,
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        leading: const AdminAccessIcon(),
         title: const Text('Список услуг'),
         centerTitle: true,
         actions: [
           IconButton(
             onPressed: () => context.go(AppRoutes.notifications),
-            icon: const Icon(
+            icon: Icon(
               Icons.notifications_none_rounded,
-              color: Color(0xFFC5A3FF),
+              color: cs.primary,
             ),
           ),
         ],
@@ -131,7 +133,7 @@ class _ServicesListPageState extends State<ServicesListPage> {
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF5F5F5),
+                        color: cs.surfaceContainerHighest.withValues(alpha: 0.45),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: TextField(
@@ -164,12 +166,12 @@ class _ServicesListPageState extends State<ServicesListPage> {
                             selected: isSelected,
                             onSelected: (_) => setState(() => _selectedCategory = category),
                             side: BorderSide.none,
-                            backgroundColor: const Color(0xFFF5F5F5),
-                            selectedColor: const Color(0xFFF3EDFF),
+                            backgroundColor: cs.surfaceContainerHighest.withValues(alpha: 0.45),
+                            selectedColor: cs.primaryContainer.withValues(alpha: 0.5),
                             labelStyle: TextStyle(
                               color: isSelected
-                                  ? const Color(0xFFC5A3FF)
-                                  : const Color(0xFF333333),
+                                  ? cs.primary
+                                  : cs.onSurface,
                               fontSize: isSelected ? 14 : 16,
                             ),
                             shape: const StadiumBorder(),
@@ -264,8 +266,9 @@ class _ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Material(
-      color: const Color(0xFFF5F5F5),
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.45),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -282,9 +285,9 @@ class _ServiceCard extends StatelessWidget {
                     height: 104,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const ColoredBox(
-                      color: Color(0xFFE7E0E8),
-                      child: Center(child: Icon(Icons.broken_image_outlined)),
+                    errorBuilder: (_, __, ___) => ColoredBox(
+                      color: cs.surfaceContainerHighest,
+                      child: const Center(child: Icon(Icons.broken_image_outlined)),
                     ),
                   ),
                 ),
@@ -296,7 +299,7 @@ class _ServiceCard extends StatelessWidget {
                       : Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.9),
+                            color: cs.surface.withValues(alpha: 0.85),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text('⭐ $rating ($reviewsCount)'),
@@ -345,7 +348,7 @@ class _ServiceCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: const Color(0xFF6D4EA2),
+                          color: cs.primary,
                         ),
                   ),
                 ],

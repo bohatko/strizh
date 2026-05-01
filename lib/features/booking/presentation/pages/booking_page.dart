@@ -18,11 +18,7 @@ class BookingPage extends ConsumerStatefulWidget {
 }
 
 class _BookingPageState extends ConsumerState<BookingPage> {
-  static const _bgColor = Color(0xFFFEF7FF);
-  static const _textPrimary = Color(0xFF1D1A20);
-  static const _textSecondary = Color(0xFF4A4550);
   static const _surfaceSoft = Color(0xFFE7E0E8);
-  static const _surfaceCard = Color(0xFFF8F1FA);
   static const _accent = Color(0xFF6D4EA2);
   static const _accentSoft = Color(0xFFC5A3FF);
   static const _accentText = Color(0xFF533487);
@@ -146,6 +142,7 @@ class _BookingPageState extends ConsumerState<BookingPage> {
   Widget build(BuildContext context) {
     final authValue = ref.watch(authControllerProvider).asData?.value;
     final isAuthed = authValue is Authenticated;
+    final cs = Theme.of(context).colorScheme;
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _masterServicesFuture,
       builder: (context, msSnapshot) {
@@ -217,7 +214,7 @@ class _BookingPageState extends ConsumerState<BookingPage> {
             final barTime = _slotShortLabel(selectedSlot);
 
             return Scaffold(
-              backgroundColor: _bgColor,
+              backgroundColor: cs.surface,
               appBar: AppBar(
                 title: const Text('Запись'),
                 centerTitle: true,
@@ -235,17 +232,17 @@ class _BookingPageState extends ConsumerState<BookingPage> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        color: const Color(0xFFFFE9E9),
+                        color: cs.errorContainer,
                       ),
-                      child: const Text(
+                      child: Text(
                         'Войдите в аккаунт, чтобы завершить запись.',
-                        style: TextStyle(color: Color(0xFF7D1F1F)),
+                        style: TextStyle(color: cs.onErrorContainer),
                       ),
                     ),
-                  const Text(
+                  Text(
                     'Выберите дату и время',
                     style: TextStyle(
-                      color: _textPrimary,
+                      color: cs.onSurface,
                       fontSize: 32,
                       fontWeight: FontWeight.w700,
                     ),
@@ -265,13 +262,13 @@ class _BookingPageState extends ConsumerState<BookingPage> {
                   const SizedBox(height: 16),
                   Text(
                     serviceDescription,
-                    style: const TextStyle(color: _textSecondary, fontSize: 14),
+                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
                   ),
                   const SizedBox(height: 16),
                   if (dateKeys.isEmpty)
-                    const Text(
+                    Text(
                       'Нет доступных дат для выбранного мастера.',
-                      style: TextStyle(color: _textSecondary),
+                      style: TextStyle(color: cs.onSurfaceVariant),
                     )
                   else
                     _DateCalendar(
@@ -296,7 +293,7 @@ class _BookingPageState extends ConsumerState<BookingPage> {
                       }),
                     ),
                   const SizedBox(height: 16),
-                  const Divider(color: _surfaceSoft),
+                  Divider(color: cs.outline.withValues(alpha: 0.25)),
                   const SizedBox(height: 12),
                   if (isRefreshingSlots)
                     const _TimeSectionsShimmer()
@@ -324,16 +321,16 @@ class _BookingPageState extends ConsumerState<BookingPage> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: _surfaceCard,
+                      color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Подтверждение',
                           style: TextStyle(
-                            color: _textPrimary,
+                            color: cs.onSurface,
                             fontSize: 24,
                             fontWeight: FontWeight.w700,
                           ),
@@ -343,12 +340,12 @@ class _BookingPageState extends ConsumerState<BookingPage> {
                         const SizedBox(height: 4),
                         Text(
                           'Мастер: ${(selectedMaster['name'] ?? '—')}',
-                          style: const TextStyle(color: _textSecondary),
+                          style: TextStyle(color: cs.onSurfaceVariant),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Дата и время: $selectedTime',
-                          style: const TextStyle(color: _textSecondary),
+                          style: TextStyle(color: cs.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -356,9 +353,9 @@ class _BookingPageState extends ConsumerState<BookingPage> {
                 ],
               ),
               bottomSheet: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xE6FFFFFF),
-                  border: Border(top: BorderSide(color: Color(0xFFE7E0E8))),
+                decoration: BoxDecoration(
+                  color: cs.surface.withValues(alpha: 0.9),
+                  border: Border(top: BorderSide(color: cs.outline.withValues(alpha: 0.2))),
                 ),
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 child: SafeArea(
@@ -372,15 +369,15 @@ class _BookingPageState extends ConsumerState<BookingPage> {
                           children: [
                             Text(
                               barTime,
-                              style: const TextStyle(
-                                color: _textSecondary,
+                              style: TextStyle(
+                                color: cs.onSurfaceVariant,
                                 fontSize: 14,
                               ),
                             ),
                             Text(
                               servicePrice,
-                              style: const TextStyle(
-                                color: _textPrimary,
+                              style: TextStyle(
+                                color: cs.onSurface,
                                 fontSize: 28,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -420,18 +417,19 @@ class _BookingPageState extends ConsumerState<BookingPage> {
   }
 
   Widget _summaryRow(String serviceName, String price) {
+    final cs = Theme.of(context).colorScheme;
     return Row(
       children: [
         Expanded(
           child: Text(
             serviceName,
-            style: const TextStyle(color: _textPrimary, fontSize: 16),
+            style: TextStyle(color: cs.onSurface, fontSize: 16),
           ),
         ),
         Text(
           price,
-          style: const TextStyle(
-            color: _accent,
+          style: TextStyle(
+            color: cs.primary,
             fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
@@ -445,13 +443,34 @@ class _BookingPageState extends ConsumerState<BookingPage> {
     List<Map<String, dynamic>> serviceOptions,
     List<Map<String, dynamic>> relations,
   ) {
-    if (_selectedMasterId == null && masterOptions.isNotEmpty) {
-      _selectedMasterId = masterOptions.first['id'] as int?;
-      _slotsFuture = _loadSlots(masterId: _selectedMasterId);
+    if (relations.isEmpty) return;
+
+    final previousMasterId = _selectedMasterId;
+    final hasInitialMaster = widget.masterId != null;
+    final hasInitialService = widget.serviceId != null;
+
+    if (_selectedMasterId == null && _selectedServiceId == null) {
+      final first = relations.first;
+      _selectedMasterId = first['master_id'] as int?;
+      _selectedServiceId = first['service_id'] as int?;
+    } else if (_selectedMasterId == null && _selectedServiceId != null) {
+      final forService = relations.firstWhere(
+        (r) => r['service_id'] == _selectedServiceId,
+        orElse: () => const {},
+      );
+      if (forService.isNotEmpty) {
+        _selectedMasterId = forService['master_id'] as int?;
+      }
+    } else if (_selectedMasterId != null && _selectedServiceId == null) {
+      final forMaster = relations.firstWhere(
+        (r) => r['master_id'] == _selectedMasterId,
+        orElse: () => const {},
+      );
+      if (forMaster.isNotEmpty) {
+        _selectedServiceId = forMaster['service_id'] as int?;
+      }
     }
-    if (_selectedServiceId == null && serviceOptions.isNotEmpty) {
-      _selectedServiceId = serviceOptions.first['id'] as int?;
-    }
+
     if (_selectedMasterId != null && _selectedServiceId != null) {
       final exists = _findRelation(
             relations,
@@ -460,14 +479,51 @@ class _BookingPageState extends ConsumerState<BookingPage> {
           ) !=
           null;
       if (!exists) {
-        final fallback = relations.firstWhere(
-          (r) => r['master_id'] == _selectedMasterId,
-          orElse: () => const {},
-        );
-        if (fallback.isNotEmpty) {
-          _selectedServiceId = fallback['service_id'] as int?;
+        if (hasInitialService && !hasInitialMaster) {
+          final forService = relations.firstWhere(
+            (r) => r['service_id'] == _selectedServiceId,
+            orElse: () => const {},
+          );
+          if (forService.isNotEmpty) {
+            _selectedMasterId = forService['master_id'] as int?;
+          }
+        } else if (hasInitialMaster && !hasInitialService) {
+          final forMaster = relations.firstWhere(
+            (r) => r['master_id'] == _selectedMasterId,
+            orElse: () => const {},
+          );
+          if (forMaster.isNotEmpty) {
+            _selectedServiceId = forMaster['service_id'] as int?;
+          }
+        } else {
+          final forMaster = relations.firstWhere(
+            (r) => r['master_id'] == _selectedMasterId,
+            orElse: () => const {},
+          );
+          if (forMaster.isNotEmpty) {
+            _selectedServiceId = forMaster['service_id'] as int?;
+          } else {
+            final first = relations.first;
+            _selectedMasterId = first['master_id'] as int?;
+            _selectedServiceId = first['service_id'] as int?;
+          }
         }
       }
+    }
+
+    final validMasterIds = masterOptions.map((m) => m['id']).toSet();
+    final validServiceIds = serviceOptions.map((s) => s['id']).toSet();
+    if (!validMasterIds.contains(_selectedMasterId)) {
+      _selectedMasterId = masterOptions.isEmpty ? null : masterOptions.first['id'] as int?;
+    }
+    if (!validServiceIds.contains(_selectedServiceId)) {
+      _selectedServiceId = serviceOptions.isEmpty ? null : serviceOptions.first['id'] as int?;
+    }
+
+    if (previousMasterId != _selectedMasterId) {
+      _selectedDateKey = null;
+      _selectedSlotId = null;
+      _slotsFuture = _loadSlots(masterId: _selectedMasterId);
     }
   }
 
@@ -767,14 +823,15 @@ class _SelectBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: onTap,
       child: Container(
       padding: const EdgeInsets.all(12),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(12)),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.45),
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
       ),
       child: Row(
         children: [
@@ -784,23 +841,23 @@ class _SelectBlock extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: _BookingPageState._textSecondary,
+                    color: cs.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
-                    color: _BookingPageState._textPrimary,
+                    color: cs.onSurface,
                   ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.keyboard_arrow_down_rounded),
+          Icon(Icons.keyboard_arrow_down_rounded, color: cs.onSurfaceVariant),
         ],
       ),
     ),
@@ -827,6 +884,7 @@ class _DateCalendar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final monthStart = DateTime(visibleMonth.year, visibleMonth.month, 1);
     final nextMonthStart = DateTime(visibleMonth.year, visibleMonth.month + 1, 1);
     final daysInMonth = nextMonthStart.subtract(const Duration(days: 1)).day;
@@ -853,8 +911,8 @@ class _DateCalendar extends StatelessWidget {
           children: [
             Text(
               '${_BookingPageState._ruMonthsNominative[visibleMonth.month - 1]} ${visibleMonth.year}',
-              style: const TextStyle(
-                color: _BookingPageState._textPrimary,
+              style: TextStyle(
+                color: cs.onSurface,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
               ),
@@ -872,15 +930,15 @@ class _DateCalendar extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        const Row(
+        Row(
           children: [
-            Expanded(child: Center(child: Text('Пн', style: TextStyle(color: _BookingPageState._textSecondary)))),
-            Expanded(child: Center(child: Text('Вт', style: TextStyle(color: _BookingPageState._textSecondary)))),
-            Expanded(child: Center(child: Text('Ср', style: TextStyle(color: _BookingPageState._textSecondary)))),
-            Expanded(child: Center(child: Text('Чт', style: TextStyle(color: _BookingPageState._textSecondary)))),
-            Expanded(child: Center(child: Text('Пт', style: TextStyle(color: _BookingPageState._textSecondary)))),
-            Expanded(child: Center(child: Text('Сб', style: TextStyle(color: _BookingPageState._textSecondary)))),
-            Expanded(child: Center(child: Text('Вс', style: TextStyle(color: _BookingPageState._textSecondary)))),
+            Expanded(child: Center(child: Text('Пн', style: TextStyle(color: cs.onSurfaceVariant)))),
+            Expanded(child: Center(child: Text('Вт', style: TextStyle(color: cs.onSurfaceVariant)))),
+            Expanded(child: Center(child: Text('Ср', style: TextStyle(color: cs.onSurfaceVariant)))),
+            Expanded(child: Center(child: Text('Чт', style: TextStyle(color: cs.onSurfaceVariant)))),
+            Expanded(child: Center(child: Text('Пт', style: TextStyle(color: cs.onSurfaceVariant)))),
+            Expanded(child: Center(child: Text('Сб', style: TextStyle(color: cs.onSurfaceVariant)))),
+            Expanded(child: Center(child: Text('Вс', style: TextStyle(color: cs.onSurfaceVariant)))),
           ],
         ),
         const SizedBox(height: 10),
@@ -913,8 +971,8 @@ class _DateCalendar extends StatelessWidget {
                   color: isSelected
                       ? _BookingPageState._accent
                       : (isAvailable
-                            ? _BookingPageState._surfaceSoft.withValues(alpha: 0.45)
-                            : const Color(0xFFF9E6EE)),
+                            ? cs.surfaceContainerHighest.withValues(alpha: 0.45)
+                            : cs.errorContainer.withValues(alpha: 0.5)),
                   shape: BoxShape.circle,
                 ),
                 child: Stack(
@@ -926,8 +984,8 @@ class _DateCalendar extends StatelessWidget {
                         color: isSelected
                             ? Colors.white
                             : (isAvailable
-                                  ? _BookingPageState._textPrimary
-                                  : _BookingPageState._textSecondary.withValues(alpha: 0.45)),
+                                  ? cs.onSurface
+                                  : cs.onSurfaceVariant.withValues(alpha: 0.55)),
                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                       ),
                     ),
@@ -965,6 +1023,7 @@ class _MonthArrowButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return InkWell(
       borderRadius: BorderRadius.circular(999),
       onTap: onPressed,
@@ -972,14 +1031,14 @@ class _MonthArrowButton extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: _BookingPageState._surfaceSoft.withValues(alpha: 0.55),
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.55),
           shape: BoxShape.circle,
         ),
         child: Icon(
           icon,
           color: onPressed == null
-              ? _BookingPageState._textSecondary.withValues(alpha: 0.35)
-              : _BookingPageState._textPrimary,
+              ? cs.onSurfaceVariant.withValues(alpha: 0.35)
+              : cs.onSurface,
           size: 20,
         ),
       ),
@@ -1112,13 +1171,14 @@ class _TimeSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: _BookingPageState._textPrimary,
+          style: TextStyle(
+            color: cs.onSurface,
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
@@ -1188,10 +1248,11 @@ class _TimeWrap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     if (slots.isEmpty) {
-      return const Text(
+      return Text(
         'Нет слотов',
-        style: TextStyle(color: _BookingPageState._textSecondary),
+        style: TextStyle(color: cs.onSurfaceVariant),
       );
     }
     return Wrap(
@@ -1208,7 +1269,7 @@ class _TimeWrap extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSelected
                   ? _BookingPageState._accentSoft
-                  : _BookingPageState._surfaceSoft,
+                  : cs.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
@@ -1216,7 +1277,7 @@ class _TimeWrap extends StatelessWidget {
               style: TextStyle(
                 color: isSelected
                     ? _BookingPageState._accentText
-                    : _BookingPageState._textPrimary,
+                    : cs.onSurface,
                 fontSize: 14,
               ),
             ),
