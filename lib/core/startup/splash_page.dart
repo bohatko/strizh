@@ -30,13 +30,13 @@ class SplashPage extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'App Template',
+                    'Стриж',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'Loading…',
+                    'Преображайся каждый день',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.withColor(cs.onSurfaceVariant),
                   ),

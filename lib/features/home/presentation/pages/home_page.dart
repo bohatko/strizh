@@ -80,6 +80,8 @@ class HomePage extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: AppSpacing.sm),
+            _LocationTile(onTap: () => showSalonLocationSheet(context)),
             const SizedBox(height: AppSpacing.md),
             Text(
               isAuthed ? 'Добрый день, ${email?.split('@').first ?? 'Анна'}!' : 'Добрый день, гость!',
@@ -193,8 +195,6 @@ class HomePage extends ConsumerWidget {
                 );
               },
             ),
-            const SizedBox(height: AppSpacing.lg),
-            _LocationTile(onTap: () => showSalonLocationSheet(context)),
           ],
         ),
       ),

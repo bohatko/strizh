@@ -31,6 +31,7 @@ class _BookingPageState extends ConsumerState<BookingPage> {
   int? _selectedServiceId;
   int? _selectedSlotId;
   String? _selectedDateKey;
+  DateTime? _visibleMonth;
   bool _submitting = false;
 
   late Future<List<Map<String, dynamic>>> _masterServicesFuture;
@@ -186,7 +187,9 @@ class _BookingPageState extends ConsumerState<BookingPage> {
         return FutureBuilder<List<Map<String, dynamic>>>(
           future: _slotsFuture,
           builder: (context, slotSnapshot) {
-            if (slotSnapshot.connectionState == ConnectionState.waiting) {
+            final isRefreshingSlots =
+                slotSnapshot.connectionState == ConnectionState.waiting;
+            if (isRefreshingSlots && !slotSnapshot.hasData) {
               return const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
               );
@@ -271,35 +274,52 @@ class _BookingPageState extends ConsumerState<BookingPage> {
                       style: TextStyle(color: _textSecondary),
                     )
                   else
-                    _DateStrip(
+                    _DateCalendar(
                       dateKeys: dateKeys,
                       selectedDateKey: _selectedDateKey,
                       onTap: (key) => setState(() {
                         _selectedDateKey = key;
                         _selectedSlotId = null;
                       }),
+                      visibleMonth: _visibleMonth!,
+                      onPrevMonth: () => setState(() {
+                        _visibleMonth = DateTime(
+                          _visibleMonth!.year,
+                          _visibleMonth!.month - 1,
+                        );
+                      }),
+                      onNextMonth: () => setState(() {
+                        _visibleMonth = DateTime(
+                          _visibleMonth!.year,
+                          _visibleMonth!.month + 1,
+                        );
+                      }),
                     ),
                   const SizedBox(height: 16),
                   const Divider(color: _surfaceSoft),
                   const SizedBox(height: 12),
-                  _TimeSection(
-                    title: 'Утро',
-                    slots: morning,
-                    selectedSlotId: _selectedSlotId,
-                    onTap: (id) => setState(() => _selectedSlotId = id),
-                  ),
-                  _TimeSection(
-                    title: 'День',
-                    slots: day,
-                    selectedSlotId: _selectedSlotId,
-                    onTap: (id) => setState(() => _selectedSlotId = id),
-                  ),
-                  _TimeSection(
-                    title: 'Вечер',
-                    slots: evening,
-                    selectedSlotId: _selectedSlotId,
-                    onTap: (id) => setState(() => _selectedSlotId = id),
-                  ),
+                  if (isRefreshingSlots)
+                    const _TimeSectionsShimmer()
+                  else ...[
+                    _TimeSection(
+                      title: 'Утро',
+                      slots: morning,
+                      selectedSlotId: _selectedSlotId,
+                      onTap: (id) => setState(() => _selectedSlotId = id),
+                    ),
+                    _TimeSection(
+                      title: 'День',
+                      slots: day,
+                      selectedSlotId: _selectedSlotId,
+                      onTap: (id) => setState(() => _selectedSlotId = id),
+                    ),
+                    _TimeSection(
+                      title: 'Вечер',
+                      slots: evening,
+                      selectedSlotId: _selectedSlotId,
+                      onTap: (id) => setState(() => _selectedSlotId = id),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -458,6 +478,18 @@ class _BookingPageState extends ConsumerState<BookingPage> {
     if (_selectedDateKey == null || !dateKeys.contains(_selectedDateKey)) {
       _selectedDateKey = dateKeys.isEmpty ? null : dateKeys.first;
       _selectedSlotId = null;
+    }
+    if (dateKeys.isEmpty) {
+      _visibleMonth = null;
+    } else {
+      final selectedDate = DateTime.tryParse(_selectedDateKey ?? '');
+      _visibleMonth ??= DateTime(
+        selectedDate?.year ?? DateTime.now().year,
+        selectedDate?.month ?? DateTime.now().month,
+      );
+      if (selectedDate != null) {
+        _visibleMonth = DateTime(selectedDate.year, selectedDate.month);
+      }
     }
     if (_selectedSlotId != null) {
       final hasSlot = allSlots.any((slot) => slot['id'] == _selectedSlotId);
@@ -706,6 +738,20 @@ class _BookingPageState extends ConsumerState<BookingPage> {
     'ноября',
     'декабря',
   ];
+  static const _ruMonthsNominative = <String>[
+    'январь',
+    'февраль',
+    'март',
+    'апрель',
+    'май',
+    'июнь',
+    'июль',
+    'август',
+    'сентябрь',
+    'октябрь',
+    'ноябрь',
+    'декабрь',
+  ];
 }
 
 class _SelectBlock extends StatelessWidget {
@@ -762,51 +808,291 @@ class _SelectBlock extends StatelessWidget {
   }
 }
 
-class _DateStrip extends StatelessWidget {
+class _DateCalendar extends StatelessWidget {
   final List<String> dateKeys;
   final String? selectedDateKey;
   final ValueChanged<String> onTap;
+  final DateTime visibleMonth;
+  final VoidCallback onPrevMonth;
+  final VoidCallback onNextMonth;
 
-  const _DateStrip({
+  const _DateCalendar({
     required this.dateKeys,
     required this.selectedDateKey,
     required this.onTap,
+    required this.visibleMonth,
+    required this.onPrevMonth,
+    required this.onNextMonth,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 46,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: dateKeys.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final key = dateKeys[index];
-          final dt = DateTime.tryParse(key);
-          final isSelected = key == selectedDateKey;
-          final label = dt == null
-              ? key
-              : '${dt.day} ${_BookingPageState._ruMonthsShort[dt.month - 1]}';
-          return InkWell(
-            borderRadius: BorderRadius.circular(999),
-            onTap: () => onTap(key),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: isSelected ? _BookingPageState._accent : Colors.white,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : _BookingPageState._textSecondary,
-                ),
+    final monthStart = DateTime(visibleMonth.year, visibleMonth.month, 1);
+    final nextMonthStart = DateTime(visibleMonth.year, visibleMonth.month + 1, 1);
+    final daysInMonth = nextMonthStart.subtract(const Duration(days: 1)).day;
+    final firstWeekday = monthStart.weekday; // 1..7 (Mon..Sun)
+    final leadingEmpty = firstWeekday - 1;
+    final totalCells = ((leadingEmpty + daysInMonth + 6) ~/ 7) * 7;
+    final available = dateKeys.toSet();
+
+    final firstAvailable = DateTime.tryParse(dateKeys.first);
+    final lastAvailable = DateTime.tryParse(dateKeys.last);
+    final minMonth = firstAvailable == null
+        ? monthStart
+        : DateTime(firstAvailable.year, firstAvailable.month);
+    final maxMonth = lastAvailable == null
+        ? monthStart
+        : DateTime(lastAvailable.year, lastAvailable.month);
+    final canPrev = DateTime(visibleMonth.year, visibleMonth.month).isAfter(minMonth);
+    final canNext = DateTime(visibleMonth.year, visibleMonth.month).isBefore(maxMonth);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              '${_BookingPageState._ruMonthsNominative[visibleMonth.month - 1]} ${visibleMonth.year}',
+              style: const TextStyle(
+                color: _BookingPageState._textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
               ),
             ),
-          );
-        },
+            const Spacer(),
+            _MonthArrowButton(
+              icon: Icons.chevron_left_rounded,
+              onPressed: canPrev ? onPrevMonth : null,
+            ),
+            const SizedBox(width: 8),
+            _MonthArrowButton(
+              icon: Icons.chevron_right_rounded,
+              onPressed: canNext ? onNextMonth : null,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        const Row(
+          children: [
+            Expanded(child: Center(child: Text('Пн', style: TextStyle(color: _BookingPageState._textSecondary)))),
+            Expanded(child: Center(child: Text('Вт', style: TextStyle(color: _BookingPageState._textSecondary)))),
+            Expanded(child: Center(child: Text('Ср', style: TextStyle(color: _BookingPageState._textSecondary)))),
+            Expanded(child: Center(child: Text('Чт', style: TextStyle(color: _BookingPageState._textSecondary)))),
+            Expanded(child: Center(child: Text('Пт', style: TextStyle(color: _BookingPageState._textSecondary)))),
+            Expanded(child: Center(child: Text('Сб', style: TextStyle(color: _BookingPageState._textSecondary)))),
+            Expanded(child: Center(child: Text('Вс', style: TextStyle(color: _BookingPageState._textSecondary)))),
+          ],
+        ),
+        const SizedBox(height: 10),
+        GridView.builder(
+          itemCount: totalCells,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            childAspectRatio: 1,
+          ),
+          itemBuilder: (context, index) {
+            final dayNumber = index - leadingEmpty + 1;
+            if (dayNumber < 1 || dayNumber > daysInMonth) {
+              return const SizedBox.shrink();
+            }
+            final mm = visibleMonth.month.toString().padLeft(2, '0');
+            final dd = dayNumber.toString().padLeft(2, '0');
+            final key = '${visibleMonth.year}-$mm-$dd';
+            final isSelected = key == selectedDateKey;
+            final isAvailable = available.contains(key);
+
+            return InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: isAvailable ? () => onTap(key) : null,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? _BookingPageState._accent
+                      : (isAvailable
+                            ? _BookingPageState._surfaceSoft.withValues(alpha: 0.45)
+                            : const Color(0xFFF9E6EE)),
+                  shape: BoxShape.circle,
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Text(
+                      '$dayNumber',
+                      style: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : (isAvailable
+                                  ? _BookingPageState._textPrimary
+                                  : _BookingPageState._textSecondary.withValues(alpha: 0.45)),
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                    if (isAvailable)
+                      Positioned(
+                        bottom: 9,
+                        child: Container(
+                          width: 5,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: isSelected ? Colors.white : _BookingPageState._accent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _MonthArrowButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  const _MonthArrowButton({
+    required this.icon,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: onPressed,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: _BookingPageState._surfaceSoft.withValues(alpha: 0.55),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          icon,
+          color: onPressed == null
+              ? _BookingPageState._textSecondary.withValues(alpha: 0.35)
+              : _BookingPageState._textPrimary,
+          size: 20,
+        ),
       ),
+    );
+  }
+}
+
+class _TimeSectionsShimmer extends StatelessWidget {
+  const _TimeSectionsShimmer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: const [
+        _ShimmerTimeSection(),
+        _ShimmerTimeSection(),
+        _ShimmerTimeSection(),
+      ],
+    );
+  }
+}
+
+class _ShimmerTimeSection extends StatelessWidget {
+  const _ShimmerTimeSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ShimmerBlock(width: 90, height: 16, borderRadius: 8),
+          SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _ShimmerBlock(width: 74, height: 32, borderRadius: 999),
+              _ShimmerBlock(width: 82, height: 32, borderRadius: 999),
+              _ShimmerBlock(width: 78, height: 32, borderRadius: 999),
+              _ShimmerBlock(width: 88, height: 32, borderRadius: 999),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShimmerBlock extends StatefulWidget {
+  final double width;
+  final double height;
+  final double borderRadius;
+
+  const _ShimmerBlock({
+    required this.width,
+    required this.height,
+    required this.borderRadius,
+  });
+
+  @override
+  State<_ShimmerBlock> createState() => _ShimmerBlockState();
+}
+
+class _ShimmerBlockState extends State<_ShimmerBlock>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final base = _BookingPageState._surfaceSoft.withValues(alpha: 0.45);
+    final highlight = Colors.white.withValues(alpha: 0.75);
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final t = _controller.value;
+        return ShaderMask(
+          blendMode: BlendMode.srcATop,
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              begin: Alignment(-1.2 + (2.4 * t), 0),
+              end: Alignment(-0.2 + (2.4 * t), 0),
+              colors: [base, highlight, base],
+              stops: const [0.0, 0.5, 1.0],
+            ).createShader(bounds);
+          },
+          child: Container(
+            width: widget.width,
+            height: widget.height,
+            decoration: BoxDecoration(
+              color: base,
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -833,7 +1119,7 @@ class _TimeSection extends StatelessWidget {
           title,
           style: const TextStyle(
             color: _BookingPageState._textPrimary,
-            fontSize: 24,
+            fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
         ),

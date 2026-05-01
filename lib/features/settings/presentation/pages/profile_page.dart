@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import 'package:app_template/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:app_template/features/auth/presentation/models/auth_state.dart';
 import 'package:app_template/core/providers/theme_provider.dart';
@@ -7,6 +9,7 @@ import 'package:app_template/theme.dart';
 import 'package:app_template/core/ui/app_button.dart';
 import 'package:app_template/core/ui/app_text_field.dart';
 import 'package:app_template/core/ui/app_snackbar.dart';
+import 'package:app_template/supabase/supabase_config.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -24,6 +27,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   DateTime? _memberSince;
   String? _staffId;
   String? _role;
+  String? _avatarUrl;
+  bool _uploadingAvatar = false;
 
   bool _initializedFromAuth = false;
 
@@ -57,8 +62,70 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     _memberSince ??= user.createdAt;
     _staffId ??= user.displayName ?? '-';
     _role ??= user.role ?? '-';
+    _avatarUrl ??= user.avatarUrl;
 
     _initializedFromAuth = true;
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    if (_uploadingAvatar) return;
+
+    final authValue = ref.read(authControllerProvider).asData?.value;
+    if (authValue is! Authenticated) {
+      AppSnackbar.showError(context, 'Пользователь не авторизован');
+      return;
+    }
+
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 88,
+      );
+      if (picked == null) return;
+
+      setState(() => _uploadingAvatar = true);
+
+      final bytes = await picked.readAsBytes();
+      final ext = _extractExtensionFromPath(picked.name);
+      final fileName =
+          '${authValue.user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.$ext';
+
+      await SupabaseConfig.client.storage.from('avatars').uploadBinary(
+            fileName,
+            bytes,
+            fileOptions: FileOptions(
+              upsert: false,
+              contentType: picked.mimeType ?? 'image/$ext',
+            ),
+          );
+
+      final publicUrl =
+          SupabaseConfig.client.storage.from('avatars').getPublicUrl(fileName);
+
+      await ref.read(authControllerProvider.notifier).updateProfile(
+            avatarUrl: publicUrl,
+          );
+
+      if (!mounted) return;
+      setState(() => _avatarUrl = publicUrl);
+      AppSnackbar.showSuccess(context, 'Фото профиля обновлено');
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackbar.showError(context, 'Не удалось загрузить фото: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _uploadingAvatar = false);
+      }
+    }
+  }
+
+  String _extractExtensionFromPath(String name) {
+    final dotIndex = name.lastIndexOf('.');
+    if (dotIndex == -1 || dotIndex == name.length - 1) return 'jpg';
+    return name.substring(dotIndex + 1).toLowerCase();
   }
 
   Future<void> _saveProfile() async {
@@ -74,7 +141,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         lastName: last.isEmpty ? null : last,
       );
       if (!mounted) return;
-      AppSnackbar.showSuccess(context, 'Profile updated');
+      AppSnackbar.showSuccess(context, 'Профиль обновлен');
     } catch (e) {
       if (!mounted) return;
       AppSnackbar.showError(context, e.toString());
@@ -118,14 +185,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   Icon(Icons.logout_rounded, color: cs.error),
                   const SizedBox(width: AppSpacing.md),
                   Text(
-                    'Sign Out',
+                    'Выход',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                'Are you sure you want to log out of SimPool?',
+                'Вы уверены, что хотите выйти из аккаунта?',
                 style: Theme.of(context)
                     .textTheme
                     .bodySmall
@@ -144,7 +211,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
               ),
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
+              child: const Text('Отмена'),
             ),
             FilledButton(
               style: ButtonStyle(
@@ -158,7 +225,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
               ),
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Confirm Logout'),
+              child: const Text('Подтвердить выход'),
             ),
           ],
         );
@@ -202,14 +269,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   Icon(Icons.report_problem_rounded, color: cs.error),
                   const SizedBox(width: AppSpacing.md),
                   Text(
-                    'Delete Account',
+                    'Удаление аккаунта',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                'Deleting your account is permanent. All service logs and customer feedback will be erased.',
+                'Удаление аккаунта необратимо. Все записи об услугах и отзывы клиентов будут удалены.',
                 style: Theme.of(context)
                     .textTheme
                     .bodySmall
@@ -228,7 +295,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
               ),
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
+              child: const Text('Отмена'),
             ),
             FilledButton(
               style: ButtonStyle(
@@ -242,7 +309,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
               ),
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Delete Account'),
+              child: const Text('Удалить аккаунт'),
             ),
           ],
         );
@@ -285,7 +352,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 children: [
                   const SizedBox(width: 48),
                   Text(
-                    'Profile Settings',
+                    'Профиль',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   IconButton(
@@ -322,7 +389,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       ),
                       child: CircleAvatar(
                         backgroundColor: cs.surfaceContainerHighest.withValues(alpha: 0.4),
-                        child: const Icon(Icons.person, size: 48),
+                        backgroundImage: (_avatarUrl ?? '').isNotEmpty
+                            ? NetworkImage(_avatarUrl!)
+                            : null,
+                        child: (_avatarUrl ?? '').isEmpty
+                            ? const Icon(Icons.person, size: 48)
+                            : null,
                       ),
                     ),
                     Positioned(
@@ -334,21 +406,23 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         elevation: 2,
                         child: InkWell(
                           customBorder: const CircleBorder(),
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Avatar change is not implemented in this template.'),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          },
+                          onTap: _uploadingAvatar ? null : _pickAndUploadAvatar,
                           child: Padding(
                             padding: const EdgeInsets.all(AppSpacing.sm),
-                            child: Icon(
-                              Icons.photo_camera_rounded,
-                              size: 18,
-                              color: cs.onPrimary,
-                            ),
+                            child: _uploadingAvatar
+                                ? SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: cs.onPrimary,
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.photo_camera_rounded,
+                                    size: 18,
+                                    color: cs.onPrimary,
+                                  ),
                           ),
                         ),
                       ),
@@ -358,7 +432,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               ),
               const SizedBox(height: AppSpacing.xl),
               Text(
-                'Preferences',
+                'Настройки',
                 style: Theme.of(context)
                     .textTheme
                     .labelLarge
@@ -367,8 +441,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               const SizedBox(height: AppSpacing.sm),
               _SettingsToggleTile(
                 icon: Icons.dark_mode_rounded,
-                title: 'Dark Mode',
-                subtitle: 'Switch between light and dark themes',
+                title: 'Темная тема',
+                subtitle: 'Переключение между светлой и темной темами',
                 value: isDark,
                 onChanged: (_) =>
                     ref.read(themeControllerProvider.notifier).toggleTheme(),
@@ -376,8 +450,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               const SizedBox(height: AppSpacing.sm),
               _SettingsToggleTile(
                 icon: Icons.notifications_active_rounded,
-                title: 'Push Notifications',
-                subtitle: 'Service reminders and updates',
+                title: 'Push-уведомления',
+                subtitle: 'Напоминания о записях и обновления',
                 value: _notificationsEnabled,
                 onChanged: (v) {
                   setState(() {
@@ -387,7 +461,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(
-                'Personal Information',
+                'Личная информация',
                 style: Theme.of(context)
                     .textTheme
                     .labelLarge
@@ -395,19 +469,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               ),
               const SizedBox(height: AppSpacing.sm),
               _ProfileInputField(
-                label: 'First Name',
+                label: 'Имя',
                 controller: _firstNameCtrl,
                 icon: Icons.person_outline_rounded,
               ),
               const SizedBox(height: AppSpacing.md),
               _ProfileInputField(
-                label: 'Last Name',
+                label: 'Фамилия',
                 controller: _lastNameCtrl,
                 icon: Icons.person_outline_rounded,
               ),
               const SizedBox(height: AppSpacing.md),
               _ProfileInputField(
-                label: 'Email Address',
+                label: 'Электронная почта',
                 controller: _emailCtrl,
                 icon: Icons.mail_outline_rounded,
                 keyboardType: TextInputType.emailAddress,
@@ -427,22 +501,22 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Account Details',
+                      'Данные аккаунта',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Divider(color: cs.outline.withValues(alpha: 0.2)),
                     const SizedBox(height: AppSpacing.sm),
                     _InfoRow(
-                      label: 'Member Since',
+                      label: 'Дата регистрации',
                       value: _formatMemberSince(_memberSince),
                     ),
                     _InfoRow(
-                      label: 'Display name',
+                      label: 'Отображаемое имя',
                       value: _staffId ?? '-',
                     ),
                     _InfoRow(
-                      label: 'Role',
+                      label: 'Роль',
                       value: _role ?? '-',
                     ),
                   ],
@@ -450,7 +524,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               ),
               const SizedBox(height: AppSpacing.lg),
               AppButton(
-                label: 'Save Changes',
+                label: 'Сохранить изменения',
                 icon: Icons.check_circle_rounded,
                 onPressed: authAsync.isLoading ? null : _saveProfile,
                 isLoading: authAsync.isLoading,
@@ -643,7 +717,7 @@ class _DangerZoneCard extends StatelessWidget {
               Icon(Icons.report_problem_rounded, color: cs.error, size: 20),
               const SizedBox(width: AppSpacing.sm),
               Text(
-                'Danger Zone',
+                'Опасная зона',
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
@@ -653,7 +727,7 @@ class _DangerZoneCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Deleting your account is permanent. All service logs and customer feedback will be erased.',
+            'Удаление аккаунта необратимо. Все записи об услугах и отзывы клиентов будут удалены.',
             style: Theme.of(context)
                 .textTheme
                 .bodySmall
@@ -666,7 +740,7 @@ class _DangerZoneCard extends StatelessWidget {
               foregroundColor: WidgetStatePropertyAll(cs.error),
             ),
             child: const Text(
-              'Delete Account',
+              'Удалить аккаунт',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),

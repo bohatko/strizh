@@ -43,17 +43,37 @@ class _SalonLocationSheetBody extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          Text('Salon location', style: Theme.of(context).textTheme.titleLarge),
+          Text('Локация салона', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Strizh Beauty Studio',
+            'Стриж Beauty Studio',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            '12 Central Avenue, Floor 2, Minsk',
+            'ул. Большая Покровская, 12, 2 этаж, Нижний Новгород',
             style: Theme.of(context).textTheme.bodyMedium?.withColor(
               cs.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Image.network(
+                'https://static-maps.yandex.ru/1.x/?lang=ru_RU&ll=44.005986,56.32867&size=650,360&z=16&l=map&pt=44.005986,56.32867,pm2rdm',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => ColoredBox(
+                  color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
+                  child: Center(
+                    child: Text(
+                      'Не удалось загрузить карту',
+                      style: Theme.of(context).textTheme.bodyMedium?.withColor(cs.onSurfaceVariant),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -69,17 +89,17 @@ class _SalonLocationSheetBody extends StatelessWidget {
               children: [
                 _InfoRow(
                   icon: Icons.schedule,
-                  text: 'Open daily: 09:00 - 21:00',
+                  text: 'Ежедневно: 09:00 - 21:00',
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 _InfoRow(
                   icon: Icons.phone,
-                  text: '+375 (29) 000-00-00',
+                  text: '+7 (831) 000-00-00',
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 _InfoRow(
                   icon: Icons.directions_walk,
-                  text: '5 minutes from Nemiga metro station',
+                  text: '5 минут от станции метро Горьковская',
                 ),
               ],
             ),
