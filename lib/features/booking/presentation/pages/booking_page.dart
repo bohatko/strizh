@@ -124,6 +124,23 @@ class _BookingPageState extends ConsumerState<BookingPage> {
     }
   }
 
+  void _handleBack() {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+
+    if (_selectedServiceId != null) {
+      context.go('/services/$_selectedServiceId');
+      return;
+    }
+    if (_selectedMasterId != null) {
+      context.go('/masters/$_selectedMasterId');
+      return;
+    }
+    context.go(AppRoutes.home);
+  }
+
   @override
   Widget build(BuildContext context) {
     final authValue = ref.watch(authControllerProvider).asData?.value;
@@ -203,7 +220,7 @@ class _BookingPageState extends ConsumerState<BookingPage> {
                 centerTitle: true,
                 leading: IconButton(
                   icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16),
-                  onPressed: () => context.pop(),
+                  onPressed: _handleBack,
                 ),
               ),
               body: ListView(

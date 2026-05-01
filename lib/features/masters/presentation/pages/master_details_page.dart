@@ -75,6 +75,14 @@ class _MasterDetailsPageState extends State<MasterDetailsPage> {
     );
   }
 
+  void _handleBack() {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go(AppRoutes.masters);
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -119,6 +127,10 @@ class _MasterDetailsPageState extends State<MasterDetailsPage> {
                     expandedHeight: 210,
                     pinned: true,
                     backgroundColor: const Color(0xFFAB7BEE),
+                    leading: IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      onPressed: _handleBack,
+                    ),
                     flexibleSpace: FlexibleSpaceBar(
                       titlePadding: const EdgeInsetsDirectional.only(
                         start: 16,

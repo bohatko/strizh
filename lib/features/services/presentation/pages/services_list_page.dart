@@ -91,6 +91,20 @@ class _ServicesListPageState extends State<ServicesListPage> {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: const Color(0xFFFEF7FF),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Список услуг'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: () => context.go(AppRoutes.notifications),
+            icon: const Icon(
+              Icons.notifications_none_rounded,
+              color: Color(0xFFC5A3FF),
+            ),
+          ),
+        ],
+      ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _servicesFuture,
         builder: (context, snapshot) {
@@ -112,11 +126,8 @@ class _ServicesListPageState extends State<ServicesListPage> {
             _selectedCategory = 'Все';
           }
           final filtered = _filterServices(services);
-          return Stack(
-            children: [
-              SafeArea(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 96, 20, 24),
+          return ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                   children: [
                     Container(
                       decoration: BoxDecoration(
@@ -171,14 +182,7 @@ class _ServicesListPageState extends State<ServicesListPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      'Популярные услуги',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: const Color(0xFF1D1A20),
-                            fontSize: 22,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     if (filtered.isEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: AppSpacing.xl),
@@ -232,56 +236,7 @@ class _ServicesListPageState extends State<ServicesListPage> {
                         },
                       ),
                   ],
-                ),
-              ),
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: SafeArea(
-                  bottom: false,
-                  child: Container(
-                    height: 64,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      border: const Border(
-                        bottom: BorderSide(color: Color(0xFFF4F4F5)),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: () => context.go(AppRoutes.home),
-                          icon: const Icon(
-                            Icons.arrow_back_rounded,
-                            color: Color(0xFFC5A3FF),
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            'Стриж',
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  color: const Color(0xFF18181B),
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => context.go(AppRoutes.notifications),
-                          icon: const Icon(
-                            Icons.notifications_none_rounded,
-                            color: Color(0xFFC5A3FF),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
+                );
         },
       ),
     );

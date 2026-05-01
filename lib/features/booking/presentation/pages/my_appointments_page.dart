@@ -81,7 +81,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
             'Отменить запись?',
             style: TextStyle(
               color: _textPrimary,
-              fontSize: 24,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -89,7 +89,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
             'Вы уверены, что хотите отменить запись? Записаться заново можно в любое время.',
             style: TextStyle(
               color: _textSecondary,
-              fontSize: 16,
+              fontSize: 14,
               height: 1.35,
             ),
           ),
@@ -190,7 +190,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
                 'Мои записи',
                 style: TextStyle(
                   color: _textPrimary,
-                  fontSize: 48,
+                  fontSize: 16,
                   height: 1.05,
                   fontWeight: FontWeight.w700,
                 ),
@@ -205,7 +205,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
                     _showUpcoming
                         ? 'Нет предстоящих записей'
                         : 'История записей пока пуста',
-                    style: const TextStyle(color: _textSecondary, fontSize: 16),
+                    style: const TextStyle(color: _textSecondary, fontSize: 14),
                   ),
                 ),
               ...visible.map((item) {
@@ -238,7 +238,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
                                   (service?['name'] ?? 'Услуга').toString(),
                                   style: const TextStyle(
                                     color: _textPrimary,
-                                    fontSize: 24,
+                                    fontSize: 14,
                                     height: 1.1,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -257,7 +257,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
                                         (master?['specialty'] ?? 'Мастер').toString(),
                                         style: const TextStyle(
                                           color: _textSecondary,
-                                          fontSize: 16,
+                                          fontSize: 14,
                                         ),
                                       ),
                                     ),
@@ -274,7 +274,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
                                 _timeLabel(dt),
                                 style: const TextStyle(
                                   color: _accent,
-                                  fontSize: 46,
+                                  fontSize: 14,
                                   height: 0.9,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -284,7 +284,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
                                 _dateLabel(dt),
                                 style: const TextStyle(
                                   color: _textSecondary,
-                                  fontSize: 18,
+                                  fontSize: 14,
                                 ),
                               ),
                             ],
@@ -301,7 +301,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
                             onPressed: () => _confirmAndCancelAppointment(id),
                             child: const Text(
                               'Отменить запись',
-                              style: TextStyle(color: _danger, fontSize: 16),
+                              style: TextStyle(color: _danger, fontSize: 14),
                             ),
                           ),
                         )
@@ -312,7 +312,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
                             onPressed: () => context.go('/appointments/$id/review'),
                             child: const Text(
                               'Оставить отзыв',
-                              style: TextStyle(color: _accent, fontSize: 16),
+                              style: TextStyle(color: _accent, fontSize: 14),
                             ),
                           ),
                         ),
@@ -375,7 +375,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
           label,
           style: TextStyle(
             color: active ? _accent : _textPrimary,
-            fontSize: 19,
+            fontSize: 14,
             fontWeight: FontWeight.w700,
           ),
         ),

@@ -12,8 +12,42 @@ import 'package:app_template/theme.dart';
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
-  Future<List<Map<String, dynamic>>> _loadPopularServices() =>
-      SupabaseService.select('services', orderBy: 'created_at', ascending: false, limit: 6);
+  Future<List<Map<String, dynamic>>> _loadPopularServices() async {
+    final services = await SupabaseService.select(
+      'services',
+      orderBy: 'created_at',
+      ascending: false,
+      limit: 6,
+    );
+    final reviews = await SupabaseConfig.client
+        .from('reviews')
+        .select('rating, appointments(service_id)');
+
+    final totals = <int, double>{};
+    final counts = <int, int>{};
+    for (final row in List<Map<String, dynamic>>.from(reviews)) {
+      final appointment = row['appointments'] as Map<String, dynamic>?;
+      final serviceId = appointment?['service_id'];
+      final rating = row['rating'];
+      if (serviceId is int && rating is num) {
+        totals[serviceId] = (totals[serviceId] ?? 0) + rating.toDouble();
+        counts[serviceId] = (counts[serviceId] ?? 0) + 1;
+      }
+    }
+
+    for (final service in services) {
+      final id = service['id'];
+      if (id is int && (counts[id] ?? 0) > 0) {
+        service['avg_rating'] = (totals[id]! / counts[id]!).toStringAsFixed(1);
+        service['reviews_count'] = counts[id];
+      } else {
+        service['avg_rating'] = null;
+        service['reviews_count'] = 0;
+      }
+    }
+
+    return services;
+  }
   Future<List<Map<String, dynamic>>> _loadMasters() =>
       SupabaseService.select('masters', orderBy: 'created_at', ascending: false, limit: 8);
 
@@ -51,6 +85,7 @@ class HomePage extends ConsumerWidget {
               isAuthed ? 'Добрый день, ${email?.split('@').first ?? 'Анна'}!' : 'Добрый день, гость!',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w700,
+                fontSize: 16,
               ),
             ),
             const SizedBox(height: 2),
@@ -117,6 +152,8 @@ class HomePage extends ConsumerWidget {
                         name: (item['name'] ?? 'Услуга').toString(),
                         price: (item['price'] ?? 0).toString(),
                         imageUrl: (item['image_url'] ?? '').toString(),
+                        rating: (item['avg_rating'] ?? '').toString(),
+                        reviewsCount: item['reviews_count'] as int? ?? 0,
                         onTap: () => context.go('/services/${item['id']}'),
                       );
                     },
@@ -209,12 +246,16 @@ class _ServiceCard extends StatelessWidget {
   final String name;
   final String price;
   final String imageUrl;
+  final String rating;
+  final int reviewsCount;
   final VoidCallback onTap;
 
   const _ServiceCard({
     required this.name,
     required this.price,
     required this.imageUrl,
+    required this.rating,
+    required this.reviewsCount,
     required this.onTap,
   });
 
@@ -260,7 +301,13 @@ class _ServiceCard extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 2),
-                const Text('⭐ 4.9 (120)'),
+                Text(
+                  rating.isEmpty ? 'Нет отзывов' : '⭐ $rating ($reviewsCount)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text('от $price ₽', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6E48B8))),
               ],

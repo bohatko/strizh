@@ -1,4 +1,4 @@
-package com.mycompany.CounterApp
+package com.strizh.strizh
 
 import io.flutter.embedding.android.FlutterActivity
 

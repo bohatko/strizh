@@ -213,8 +213,7 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     final index = _indexForLocation(location);
-    final hideBottomNav = location == AppRoutes.services ||
-        location.startsWith('/services/') ||
+    final hideBottomNav = location.startsWith('/services/') ||
         location.startsWith(AppRoutes.booking);
 
     final theme = Theme.of(context);

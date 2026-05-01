@@ -132,7 +132,7 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
                             Text(
                               title,
                               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                    fontSize: 32,
+                                    fontSize: 16,
                                     height: 1.25,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: -0.5,
@@ -193,7 +193,7 @@ class _ServiceDetailsPageState extends State<ServiceDetailsPage> {
                             const Text(
                               'Доступные специалисты',
                               style: TextStyle(
-                                fontSize: 32,
+                                fontSize: 16,
                                 height: 1.2,
                                 fontWeight: FontWeight.w600,
                                 letterSpacing: -0.2,
