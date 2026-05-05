@@ -9,7 +9,7 @@ class SplashPage extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -22,7 +22,7 @@ class SplashPage extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(AppRadius.lg),
                     child: Image.asset(
-                      'assets/icons/flutter.jpg',
+                      'assets/icons/app_icon.png',
                       width: 84,
                       height: 84,
                       fit: BoxFit.cover,

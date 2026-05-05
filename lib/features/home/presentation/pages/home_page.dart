@@ -10,8 +10,46 @@ import 'package:app_template/nav.dart';
 import 'package:app_template/supabase/supabase_config.dart';
 import 'package:app_template/theme.dart';
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
+
+  @override
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  late final PageController _promoPageController;
+  int _promoPage = 0;
+
+  static const _promos = [
+    _PromoData(
+      badge: '-20% СКИДКА',
+      title: 'Весеннее\nобновление волос',
+      buttonLabel: 'Записаться',
+    ),
+    _PromoData(
+      badge: '-15% СКИДКА',
+      title: 'Окрашивание\nпремиум',
+      buttonLabel: 'Выбрать',
+    ),
+    _PromoData(
+      badge: '-25% СКИДКА',
+      title: 'Комплекс\nстрижка + уход',
+      buttonLabel: 'Подробнее',
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _promoPageController = PageController(viewportFraction: 0.94);
+  }
+
+  @override
+  void dispose() {
+    _promoPageController.dispose();
+    super.dispose();
+  }
 
   Future<List<Map<String, dynamic>>> _loadPopularServices() async {
     final services = await SupabaseService.select(
@@ -53,7 +91,7 @@ class HomePage extends ConsumerWidget {
       SupabaseService.select('masters', orderBy: 'created_at', ascending: false, limit: 8);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final cs = Theme.of(context).colorScheme;
     final authValue = authState.asData?.value;
@@ -98,41 +136,72 @@ class HomePage extends ConsumerWidget {
               style: Theme.of(context).textTheme.bodyMedium?.withColor(cs.onSurfaceVariant),
             ),
             const SizedBox(height: AppSpacing.xl),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFFB388FF), Color(0xFFAB7BEE)]),
-                borderRadius: BorderRadius.circular(20),
+            SizedBox(
+              height: 198,
+              child: PageView.builder(
+                controller: _promoPageController,
+                itemCount: _promos.length,
+                onPageChanged: (index) => setState(() => _promoPage = index),
+                itemBuilder: (context, index) {
+                  final promo = _promos[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(right: AppSpacing.sm),
+                    child: Container(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [Color(0xFFB388FF), Color(0xFFAB7BEE)]),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            promo.badge,
+                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.85),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            promo.title,
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: cs.surface,
+                              foregroundColor: cs.primary,
+                            ),
+                            onPressed: () => context.go(isAuthed ? AppRoutes.booking : AppRoutes.login),
+                            child: Text(promo.buttonLabel),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '-20% СКИДКА',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontWeight: FontWeight.w700,
-                    ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(_promos.length, (index) {
+                final isActive = index == _promoPage;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  height: 6,
+                  width: isActive ? 18 : 6,
+                  decoration: BoxDecoration(
+                    color: isActive ? cs.primary : cs.onSurfaceVariant.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(999),
                   ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Весеннее\nобновление волос',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: cs.surface,
-                      foregroundColor: cs.primary,
-                    ),
-                    onPressed: () => context.go(isAuthed ? AppRoutes.booking : AppRoutes.login),
-                    child: const Text('Записаться'),
-                  ),
-                ],
-              ),
+                );
+              }),
             ),
             const SizedBox(height: AppSpacing.xl),
             _SectionHeader(
@@ -228,6 +297,18 @@ class HomePage extends ConsumerWidget {
             ),
     );
   }
+}
+
+class _PromoData {
+  final String badge;
+  final String title;
+  final String buttonLabel;
+
+  const _PromoData({
+    required this.badge,
+    required this.title,
+    required this.buttonLabel,
+  });
 }
 
 class _SectionHeader extends StatelessWidget {

@@ -23,16 +23,32 @@ class StartupGate extends ConsumerStatefulWidget {
 }
 
 class _StartupGateState extends ConsumerState<StartupGate> {
+  static const _minimumSplashDuration = Duration(seconds: 2);
+  bool _isMinDurationElapsed = false;
+
   @override
   void initState() {
     super.initState();
-    ref.listenManual(authControllerProvider, (prev, next) {
-      final complete = ref.read(startupCompleteProvider);
-      if (complete) return;
-      if (!next.isLoading) {
-        ref.read(startupCompleteProvider.notifier).markComplete();
-      }
+    Future<void>.delayed(_minimumSplashDuration, () {
+      if (!mounted) return;
+      _isMinDurationElapsed = true;
+      _tryCompleteStartup();
     });
+
+    ref.listenManual(authControllerProvider, (prev, next) {
+      _tryCompleteStartup(authState: next);
+    });
+  }
+
+  void _tryCompleteStartup({AsyncValue<dynamic>? authState}) {
+    final complete = ref.read(startupCompleteProvider);
+    if (complete || !_isMinDurationElapsed) return;
+
+    final AsyncValue<dynamic> currentAuth =
+        authState ?? ref.read(authControllerProvider);
+    if (!currentAuth.isLoading) {
+      ref.read(startupCompleteProvider.notifier).markComplete();
+    }
   }
 
   @override

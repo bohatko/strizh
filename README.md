@@ -1,420 +1,240 @@
-## Шаблон Flutter + Riverpod + Supabase
+# Стриж — мобильное приложение для салона красоты
 
-Этот репозиторий - **готовый шаблон** Flutter-приложения с:
+Проект `strizh` — это кроссплатформенное Flutter-приложение для автоматизации клиентского пути в салоне красоты: от просмотра услуг и мастеров до онлайн-записи, управления профилем и сбора отзывов.
 
-- **Flutter** + Material 3 темы (светлая/темная)
-- **Riverpod** для состояния
-- **Supabase** как backend (авторизация + профили)
-- **go_router** для навигации
-
-
-
-Можно делать почти любое приложение с авторизацией и профилем. Примеры категорий:
-
-Магазины и каталоги (e‑commerce, витрины, прайс‑листы)
-Блоги и медиа (новости, статьи, журналы)
-Спорт и фитнес (тренировки, команды, расписания)
-Сервисы и заказы (такси, курьеры, клининг, ремонт)
-Образование (курсы, школы, трекеры прогресса)
-Сообщества (форумы, клубы, мероприятия)
-Бронирование (отели, столики, слоты, очереди)
-HR и работа (вакансии, заявки, портфолио)
-CRM/учет (клиенты, сделки, задачи)
-Здоровье (записи, напоминания, профили)
-Финансы (личные бюджеты, счета, аналитика)
-B2B порталы (доступы по ролям, кабинеты)
-
-
-
-git clone https://github.com/bohatko/FlutterSupaRiverpod my_new_app
-cd my_new_app
-rm -rf .git
-git init
-git add .
-git commit -m "Initial commit"
-
-
-
-## 1. Что делать после клонирования репозитория
-
-1. **Установи Flutter** (если еще нет)
-   - Скачай Flutter SDK для своей ОС
-   - Добавь `flutter/bin` в `PATH`
-   - Проверь:
-     ```bash
-     flutter --version
-     flutter doctor
-     ```
-
-2. **Установи зависимости проекта**
-   ```bash
-   flutter pub get
-   ```
-
-3. **Проверь, что проект собирается (без Supabase)**
-   ```bash
-   flutter analyze
-   ```
+README написан в формате, удобном для подготовки к защите диплома: что сделано, как работает система, какие технологии выбраны и как продемонстрировать результат.
 
 ---
 
-## 2. Настройка Supabase
+## 1. Идея и цель проекта
 
-Инициализация Supabase находится в `lib/supabase/supabase_config.dart` и использует
-`AppConfig` (`lib/core/config/app_config.dart`), который берет значения из:
+### Проблема
+Во многих салонах запись ведется через мессенджеры и звонки. Это создает ошибки в расписании, перегруз администраторов и неудобство для клиентов.
 
-- локального файла `lib/env/env.dart` (по умолчанию)
-- либо из `--dart-define=SUPABASE_URL/ANON_KEY` (если они переданы при запуске/сборке)
+### Цель
+Создать единое мобильное приложение, в котором клиент может:
+- посмотреть услуги и мастеров;
+- выбрать удобное время;
+- записаться онлайн;
+- отслеживать свои записи;
+- редактировать профиль и управлять аккаунтом.
 
-### 2.1. Где взять значения
-
-1. Зайди в проект Supabase -> **Project Settings -> API**.
-2. Скопируй:
-   - `Project URL` -> это `SUPABASE_URL`
-   - `anon public` key -> это `SUPABASE_ANON_KEY`
-
-### 2.2. Как указать значения (локально)
-
-1. Скопируй `lib/env/env.example.dart` в `lib/env/env.dart` (он добавлен в `.gitignore`).
-2. Впиши свои значения:
-
-```dart
-const String supabaseUrl = 'https://your-project-id.supabase.co';
-const String supabaseAnonKey = 'your_anon_public_key';
-```
-
-3. После этого дополнительных флагов не нужно, достаточно обычной команды:
-
-```bash
-flutter run
-```
-
-Для Web (Chrome):
-
-```bash
-flutter run -d chrome
-```
-
-### 2.3. Вариант для CI / продакшн (через Dart defines)
-
-Для сборок в CI или когда не хочешь использовать `env.dart`, можно передавать
-ключи через `--dart-define` (они имеют приоритет над `env.dart`):
-
-```bash
-flutter run \
-  --dart-define=SUPABASE_URL=https://your-project-id.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=your_anon_public_key \
-  --dart-define=APP_ENV=dev
-```
-
-Для релизной сборки:
-
-```bash
-flutter build apk --release \
-  --dart-define=SUPABASE_URL=https://your-project-id.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=your_anon_public_key \
-  --dart-define=APP_ENV=prod
-```
-
-### 2.4. Схема таблицы `public.profiles`
-
-Шаблон ожидает, что в Supabase есть таблица профилей ровно с такой схемой:
-
-```sql
-create table public.profiles (
-  id uuid not null,
-  created_at timestamp with time zone not null default now(),
-  first_name text null,
-  last_name text null,
-  email text null,
-  display_name text null,
-  avatar_url text null,
-  updated_at date null,
-  role public.user_role not null default 'user'::user_role,
-  soft_delete boolean null default false,
-  constraint profiles_pkey primary key (id),
-  constraint profiles_id_fkey
-    foreign key (id) references auth.users (id)
-    on update cascade on delete cascade
-);
-```
-Также enums с ролями user и admin
-
-- Поля `first_name` и `last_name` заполняются с экрана `/profile`.
-- `display_name` используется как основное отображаемое имя.
-- `role`(enums) читается на экране `/profile` (блок **Account Details**).
-- `soft_delete` выставляется в `true` при удалении аккаунта, плюс происходит `signOut()`.
+### Практический результат
+Приложение уменьшает ручную нагрузку на салон и повышает удобство обслуживания клиентов.
 
 ---
 
-## 3. Запуск по платформам
+## 2. Функциональные возможности
 
-### 3.1. Android
+В текущей версии реализованы следующие функции:
 
-После настройки `lib/env/env.dart`:
-
-```bash
-flutter run
-```
-
-Требуется:
-
-- Android Studio / Android SDK
-- хотя бы один эмулятор или реальное устройство
-
-### 3.2. iOS (на macOS)
-
-```bash
-flutter run
-```
-
-Или сборка:
-
-```bash
-flutter build ios --release \
-  --dart-define=SUPABASE_URL=... \
-  --dart-define=SUPABASE_ANON_KEY=...
-```
-
-Требуется:
-
-- macOS
-- Xcode + настроенный signing
-
-### 3.3. Web
-
-```bash
-flutter run -d chrome
-```
+- авторизация и регистрация по email/паролю через Supabase Auth;
+- экран приветствия и корректный startup-поток;
+- главная страница с популярными услугами и мастерами;
+- просмотр списка услуг и карточки услуги;
+- просмотр списка мастеров и карточки мастера;
+- создание записи на услугу (booking flow);
+- раздел «Мои записи»;
+- просмотр уведомлений;
+- оставление отзыва после визита;
+- профиль пользователя (имя, фамилия, аватар, роль, дата регистрации);
+- загрузка аватара в Supabase Storage;
+- выход из аккаунта и мягкое удаление аккаунта (soft delete);
+- защита маршрутов для неавторизованных пользователей;
+- ограничение доступа к админ-панели по роли `admin`;
+- светлая/темная тема интерфейса.
 
 ---
 
-## 4. Архитектура и структура
+## 3. Технологический стек и обоснование выбора
 
-Проект организован по feature-first и Clean Architecture:
+- `Flutter` — единая кодовая база для Android, iOS и Web.
+- `flutter_riverpod` — предсказуемое управление состоянием и DI через провайдеры.
+- `go_router` — декларативная маршрутизация, редиректы и guard-логика.
+- `supabase_flutter` — backend-as-a-service (Auth, Postgres, Storage).
+- `shared_preferences` — локальное хранение пользовательских настроек (например, тема).
+- `image_picker` — выбор изображения из галереи для аватара.
 
-```
+Почему это важно для диплома: стек ориентирован на промышленную разработку, масштабируемость и быстрое расширение функционала.
+
+---
+
+## 4. Архитектура проекта
+
+Проект организован по подходу `feature-first` с разделением на слои:
+
+- `presentation` — UI-страницы, контроллеры, пользовательские сценарии;
+- `domain` — модели и контракты (интерфейсы репозиториев);
+- `data` — реализация работы с Supabase и внешними источниками данных.
+
+Основная структура:
+
+```text
 lib/
-  core/                  # Общие утилиты и UI
-  features/              # Фичи
-    auth/
-      data/              # Репозитории и провайдеры данных
-      domain/            # Бизнес-логика и модели
-      presentation/      # UI и контроллеры
-    home/
-      presentation/
-        pages/
-    search/
-      presentation/
-        pages/
-    settings/
-      presentation/
-        pages/
-    shop/
-      presentation/
-        pages/
-  supabase/              # Конфигурация Supabase
-  main.dart              # Точка входа
-  nav.dart               # Роутинг
-  theme.dart             # Тема
-```
-
-### Ключевые компоненты
-
-- **Auth**: `AuthController` управляет входом/регистрацией/выходом/сбросом пароля
-- **Профили**: таблица `public.profiles` + soft delete (см. раздел Supabase)
-- **Тема**: `ThemeNotifier` сохраняет тему в `shared_preferences`
-- **Логи**: `AppLogger` в `lib/core/logging/app_logger.dart`
-- **UI Kit**: `AppButton`, `AppTextField`, `AppDialog`, `AppSnackbar`
-
-### Добавление новой фичи (шаблон)
-
-```
-lib/features/your_feature/
-  data/
-    providers/
-    repositories/
-  domain/
-    models/
-    repositories/
-  presentation/
-    controllers/
-    models/
-    pages/
+  core/                    # Конфигурация, сеть, общие UI-компоненты, startup
+  features/
+    auth/                  # Авторизация и профиль
+    home/                  # Главная страница
+    services/              # Услуги
+    masters/               # Мастера
+    booking/               # Запись
+    reviews/               # Отзывы
+    notifications/         # Уведомления
+    settings/              # Настройки
+    admin/                 # Админ-панель
+  supabase/                # Инициализация и сервис доступа к БД
+  nav.dart                 # Централизованная маршрутизация
+  main.dart                # Точка входа
+  theme.dart               # Тема Material 3
 ```
 
 ---
 
-## 5. Использование репозитория как шаблона
+## 5. Как работает приложение (сквозной сценарий)
 
-### 4.1. Клонировать под новый проект
+### 5.1. Запуск приложения
+1. В `main()` вызывается `SupabaseConfig.initialize()`.
+2. Приложение оборачивается в `ProviderScope`.
+3. В `MaterialApp.router` подключается `NetworkGate` и `StartupGate`.
+4. `StartupGate` показывает splash-экран минимум 2 секунды и ждет завершения загрузки auth-состояния.
 
-1. Склонируй репозиторий в новую папку:
+### 5.2. Авторизация и состояние пользователя
+1. `AuthController` (Riverpod `AsyncNotifier`) получает текущего пользователя из `SupabaseAuthRepository`.
+2. Если пользователь найден — состояние `Authenticated`, иначе `Unauthenticated`.
+3. Стрим `authStateChanges()` синхронизирует UI при входе/выходе.
 
-   ```bash
-   git clone <url_этого_репозитория> my_new_app
-   cd my_new_app
-   ```
+### 5.3. Навигация и контроль доступа
+В `nav.dart` настроен `GoRouter` с редиректами:
+- если пользователь не авторизован, защищенные маршруты (`/booking`, `/my-appointments`, `/profile`, `/settings`) перенаправляют на `/login`;
+- если пользователь авторизован и открывает `/login`, выполняется редирект на `/home`;
+- маршрут `/admin` доступен только пользователю с ролью `admin`.
 
-2. (Опционально) оборвать связь с исходным Git-репо и создать свое:
+### 5.4. Работа с данными
+- Данные услуг, мастеров, записей и отзывов берутся из Supabase Postgres.
+- Общие CRUD-операции вынесены в `SupabaseService`.
+- На главной странице рассчитывается средняя оценка услуги на основе таблицы отзывов.
 
-   ```bash
-   rm -rf .git        # осторожно, удаляет историю!
-   git init
-   git add .
-   git commit -m "Initial commit from app_template"
-   ```
+### 5.5. Профиль и медиа
+- Пользователь редактирует ФИО и отображаемое имя.
+- Аватар загружается в bucket `avatars` через Supabase Storage.
+- После загрузки публичная ссылка сохраняется в профиле пользователя.
 
-3. Установи зависимости:
+### 5.6. Удаление аккаунта
+Реализован `soft delete`:
+- в `auth.user_metadata` и в таблице `profiles` выставляется `soft_delete = true`;
+- затем выполняется `signOut()`;
+- при повторном входе такой аккаунт автоматически блокируется на уровне клиентской логики.
 
-   ```bash
-   flutter pub get
-   ```
+---
 
-### 4.2. Переименовать проект под себя
+## 6. Модель данных Supabase
 
-**1. Имя пакета Flutter**
+Ключевая таблица: `public.profiles`.
 
-- Открой `pubspec.yaml` и поменяй:
+Минимально ожидаемые поля:
+- `id uuid` (PK, FK на `auth.users.id`);
+- `email text`;
+- `display_name text`;
+- `first_name text`;
+- `last_name text`;
+- `avatar_url text`;
+- `role user_role` (`user` или `admin`);
+- `soft_delete boolean`;
+- `created_at timestamptz`;
+- `updated_at timestamptz/date`.
 
-  ```yaml
-  name: app_template        # замени на свое (латиница, нижний регистр, подчеркивания)
-  description: "..."        # опционально
-  ```
+Также используются прикладные таблицы проекта (например, `services`, `masters`, `appointments`, `reviews`) и bucket `avatars` в Storage.
 
-**2. Имя приложения внутри Flutter**
+---
 
-- В `lib/main.dart`:
+## 7. Безопасность и надежность
 
-  ```dart
-  return MaterialApp.router(
-    title: 'App Template', // замени на свое название
-    ...
-  );
-  ```
+- доступ к экранам ограничивается состоянием аутентификации и ролью;
+- soft delete защищает от случайного восстановления удаленного профиля;
+- ошибки Supabase перехватываются и логируются через `AppLogger`;
+- конфигурация URL и ключей не зашита в код: поддерживаются `env.dart` и `--dart-define`;
+- для профиля реализована отказоустойчивость (например, fallback при отсутствии отдельных колонок).
 
-**3. Название на Android**
+---
 
-- Файл: `android/app/src/main/AndroidManifest.xml`
-  ```xml
-  <application
-      android:label="App Template"
-      ...>
-  ```
-  Поставь нужное название вместо `App Template`.
+## 8. Инструкция по запуску
 
-**4. Название на iOS**
+### 8.1. Требования
+- Flutter SDK (рекомендуется версия с Dart `^3.6.0`);
+- Android Studio / Xcode (для мобильных платформ);
+- Supabase-проект с настроенными таблицами и Auth.
 
-- Файл: `ios/Runner/Info.plist`
-  ```xml
-  <key>CFBundleDisplayName</key>
-  <string>App Template</string>
-
-  <key>CFBundleName</key>
-  <string>app_template</string>
-  ```
-
-**5. Web-название**
-
-- Файл: `web/index.html`
-  ```html
-  <meta name="apple-mobile-web-app-title" content="app_template">
-  <title>app_template</title>
-  ```
-
-- Файл: `web/manifest.json`
-  ```json
-  "name": "app_template",
-  "short_name": "app_template",
-  ```
-
-### 4.3. Поменять идентификаторы (bundle id / applicationId)
-
-> Эти шаги нужны, если планируешь публиковать приложение или иметь несколько разных приложений.  
-
-- **Android**: файл `android/app/build.gradle` (или `build.gradle.kts`)
-  В `defaultConfig` найди:
-
-  ```groovy
-  applicationId "com.example.app_template"
-  ```
-
-  Замени на свое, например:
-
-  ```groovy
-  applicationId "com.mycompany.mynewapp"
-  ```
-
-- **iOS**: через Xcode  
-  Открой `ios/Runner` в Xcode -> таргет **Runner** -> вкладка **General** -> поле **Bundle Identifier**.  
-  Поставь, например: `com.mycompany.mynewapp`.
-
-После изменения идентификаторов рекомендуется выполнить:
-
+### 8.2. Установка зависимостей
 ```bash
-flutter clean
 flutter pub get
 ```
 
----
+### 8.3. Настройка переменных окружения
+Укажите `SUPABASE_URL` и `SUPABASE_ANON_KEY` одним из двух способов:
 
-## 6. Иконки приложения
+1) локально через `lib/env/env.dart`;  
+2) через `--dart-define` при запуске.
 
-Шаблон настроен на использование генератора иконок `flutter_launcher_icons`:
-
-- В `pubspec.yaml`:
-
-  ```yaml
-  flutter_launcher_icons:
-    android: true
-    ios: true
-    image_path: assets/icons/flutter.jpg
-    remove_alpha_ios: true
-  ```
-
-Шаги:
-
-1. Положи свою иконку по пути `assets/icons/flutter.jpg` (или поменяй путь в `pubspec.yaml`).
-2. Запусти:
-
-   ```bash
-   flutter pub run flutter_launcher_icons
-   ```
-
----
-
-## 7. Важные директории и что не коммитить
-
-При работе с шаблоном **не нужно копировать/коммитить**:
-
-- `build/`
-- `.dart_tool/`
-- `.idea/`, `.vscode/`
-- `ios/Pods/`
-
-Если проект разрастается, можно периодически чистить сборки:
-
+Пример:
 ```bash
-flutter clean
-flutter pub get
+flutter run --dart-define=SUPABASE_URL=https://your-project.supabase.co --dart-define=SUPABASE_ANON_KEY=your_anon_key
+```
+
+### 8.4. Запуск
+- Android/iOS:
+```bash
+flutter run
+```
+
+- Web:
+```bash
+flutter run -d chrome
 ```
 
 ---
 
-## 8. Краткий чек-лист после клонирования
+## 9. Что показать на защите диплома (демо-сценарий)
 
-1. `flutter pub get`
-2. Настроить Supabase (`SUPABASE_URL`, `SUPABASE_ANON_KEY`)
-3. Решить:
-   - используешь этот репозиторий как есть **или**
-   - обнуляешь `.git` и создаешь свой репозиторий
-4. Переименовать:
-   - `pubspec.yaml -> name`
-   - заголовок в `lib/main.dart`
-   - названия в Android/iOS/Web (по желанию)
-5. Заменить иконку и прогнать `flutter_launcher_icons`
-6. Запустить:
+Рекомендуемая последовательность демонстрации:
 
-   ```bash
-   flutter run
-   ```
+1. Кратко сформулировать проблему и цель проекта.
+2. Показать архитектуру (feature-first + Riverpod + Supabase).
+3. Запустить приложение и пройти путь пользователя:
+   - вход/регистрация;
+   - главная (услуги и мастера);
+   - переход в карточку услуги;
+   - создание записи;
+   - раздел «Мои записи»;
+   - изменение профиля и аватара;
+   - удаление аккаунта (soft delete).
+4. Показать guard-механику:
+   - неавторизованный пользователь не попадает в защищенные разделы;
+   - доступ к `/admin` только при роли `admin`.
+5. Подчеркнуть практическую ценность и возможные доработки.
+
+---
+
+## 10. Сильные стороны проекта для диплома
+
+- кроссплатформенность (одна кодовая база);
+- реальная backend-интеграция (Auth + Postgres + Storage);
+- продуманная навигация и контроль доступа;
+- модульная архитектура, удобная для масштабирования;
+- готовность к расширению в сторону коммерческого продукта.
+
+---
+
+## 11. Направления развития
+
+- push-уведомления через Firebase/Supabase Edge Functions;
+- онлайн-оплата и подтверждение записи;
+- расписание мастеров в реальном времени;
+- панель администратора для управления услугами и слотами;
+- аналитика: конверсия, возврат клиентов, средний чек;
+- автоматические тесты (unit/widget/integration) и CI/CD.
+
+---
+
+## 12. Краткий вывод
+
+`Стриж` — это полнофункциональный MVP цифрового сервиса салона красоты. Проект демонстрирует не только разработку интерфейса, но и построение полноценной клиент-серверной системы с авторизацией, бизнес-логикой, хранением данных и контролем доступа.
