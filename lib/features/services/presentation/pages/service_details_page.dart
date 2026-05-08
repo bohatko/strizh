@@ -1,4 +1,5 @@
 import 'package:app_template/nav.dart';
+import 'package:app_template/core/ui/safe_network_image.dart';
 import 'package:app_template/supabase/supabase_config.dart';
 import 'package:app_template/theme.dart';
 import 'package:flutter/material.dart';
@@ -398,27 +399,16 @@ class _MasterCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Column(
             children: [
-              Container(
+              SizedBox(
                 width: 80,
                 height: 80,
-                clipBehavior: Clip.antiAlias,
-                decoration: const BoxDecoration(shape: BoxShape.circle),
-                child: imageUrl == null
-                    ? Container(
-                        color: cs.surfaceContainerHighest,
-                        child: const Icon(
-                          Icons.person_outline,
-                          size: 28,
-                        ),
-                      )
-                    : Image.network(
-                        imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: cs.surfaceContainerHighest,
-                          child: const Icon(Icons.person_outline),
-                        ),
-                      ),
+                child: SafeNetworkAvatar(
+                  url: imageUrl,
+                  radius: 40,
+                  backgroundColor: cs.surfaceContainerHighest,
+                  icon: Icons.person_outline,
+                  iconSize: 28,
+                ),
               ),
               const SizedBox(height: 8),
               Text(

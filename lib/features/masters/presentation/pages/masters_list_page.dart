@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_template/core/ui/admin_access_icon.dart';
+import 'package:app_template/core/ui/safe_network_image.dart';
 import 'package:app_template/nav.dart';
 import 'package:app_template/supabase/supabase_config.dart';
 import 'package:app_template/theme.dart';
@@ -141,15 +142,12 @@ class _MasterTile extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
+                  SafeNetworkAvatar(
+                    url: avatarUrl,
                     radius: 30,
                     backgroundColor: cs.primaryContainer,
-                    backgroundImage: avatarUrl.isNotEmpty
-                        ? NetworkImage(avatarUrl)
-                        : null,
-                    child: avatarUrl.isEmpty
-                        ? Icon(Icons.person, color: cs.onPrimaryContainer)
-                        : null,
+                    icon: Icons.person,
+                    iconColor: cs.onPrimaryContainer,
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(

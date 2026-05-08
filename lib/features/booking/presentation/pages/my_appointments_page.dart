@@ -37,10 +37,34 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
     }
     final rows = await SupabaseConfig.client
         .from('appointments')
-        .select('id, appointment_time, status, masters(specialty), services(name)')
+        .select(
+          'id, created_at, appointment_time, status, masters(id, specialty), services(id, name)',
+        )
         .eq('client_id', authValue.user.id)
-        .order('appointment_time', ascending: false);
-    return List<Map<String, dynamic>>.from(rows);
+        .order('created_at', ascending: false)
+        .order('id', ascending: false);
+    final appointments = List<Map<String, dynamic>>.from(rows);
+
+    final reviewRows = await SupabaseConfig.client
+        .from('reviews')
+        .select('appointments!inner(service_id)')
+        .eq('client_id', authValue.user.id);
+    final reviewedServiceIds = <int>{};
+    for (final row in List<Map<String, dynamic>>.from(reviewRows)) {
+      final appointment = row['appointments'] as Map<String, dynamic>?;
+      final serviceId = appointment?['service_id'];
+      if (serviceId is int) {
+        reviewedServiceIds.add(serviceId);
+      }
+    }
+
+    for (final item in appointments) {
+      final service = item['services'] as Map<String, dynamic>?;
+      final serviceId = service?['id'];
+      item['_has_review_for_service'] =
+          serviceId is int && reviewedServiceIds.contains(serviceId);
+    }
+    return appointments;
   }
 
   Future<void> _cancelAppointment(int appointmentId) async {
@@ -210,7 +234,9 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
               ...visible.map((item) {
                 final status = (item['status'] ?? '').toString();
                 final id = item['id'] as int;
-                final canReview = status == 'completed';
+                final hasReviewForService = item['_has_review_for_service'] == true;
+                final canReview = status == 'completed' && !hasReviewForService;
+                final canOpenReview = status == 'completed' && hasReviewForService;
                 final canCancel = status == 'pending' || status == 'confirmed';
                 final master = item['masters'] as Map<String, dynamic>?;
                 final service = item['services'] as Map<String, dynamic>?;
@@ -301,6 +327,27 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
                             child: const Text(
                               'Отменить запись',
                               style: TextStyle(color: _danger, fontSize: 14),
+                            ),
+                          ),
+                        )
+                      else if (canOpenReview)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              final masterId = master?['id'];
+                              if (masterId is int) {
+                                context.go('/masters/$masterId?scrollTo=reviews');
+                              } else {
+                                AppSnackbar.showError(
+                                  context,
+                                  'Не удалось открыть страницу отзыва',
+                                );
+                              }
+                            },
+                            child: const Text(
+                              'Перейти к отзыву',
+                              style: TextStyle(color: _accent, fontSize: 14),
                             ),
                           ),
                         )

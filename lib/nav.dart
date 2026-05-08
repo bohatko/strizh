@@ -116,10 +116,15 @@ class AppRouter {
               builder: (context, state) {
                 final rawMasterId = state.pathParameters['masterId'];
                 final masterId = int.tryParse(rawMasterId ?? '');
+                final scrollToReviews =
+                    state.uri.queryParameters['scrollTo'] == 'reviews';
                 if (masterId == null) {
                   return const Scaffold(body: Center(child: Text('Master not found')));
                 }
-                return MasterDetailsPage(masterId: masterId);
+                return MasterDetailsPage(
+                  masterId: masterId,
+                  scrollToReviews: scrollToReviews,
+                );
               },
             ),
             GoRoute(

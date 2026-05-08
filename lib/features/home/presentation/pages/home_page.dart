@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_template/core/ui/admin_access_icon.dart';
 import 'package:app_template/core/ui/app_snackbar.dart';
+import 'package:app_template/core/ui/safe_network_image.dart';
 import 'package:app_template/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:app_template/features/auth/presentation/models/auth_state.dart';
 import 'package:app_template/features/salon/presentation/widgets/salon_location_sheet.dart';
@@ -441,11 +442,12 @@ class _MasterChip extends StatelessWidget {
         width: 92,
         child: Column(
           children: [
-            CircleAvatar(
+            SafeNetworkAvatar(
+              url: avatarUrl,
               radius: 34,
               backgroundColor: cs.surfaceContainerHighest,
-              backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
-              child: avatarUrl.isEmpty ? const Icon(Icons.person, size: 34) : null,
+              icon: Icons.person,
+              iconSize: 34,
             ),
             const SizedBox(height: 8),
             Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleSmall),

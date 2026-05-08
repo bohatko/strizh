@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:app_template/core/ui/safe_network_image.dart';
 import 'package:app_template/nav.dart';
 import 'package:app_template/supabase/supabase_config.dart';
 import 'package:app_template/theme.dart';
 
 class MasterDetailsPage extends StatefulWidget {
   final int masterId;
-  const MasterDetailsPage({super.key, required this.masterId});
+  final bool scrollToReviews;
+  const MasterDetailsPage({
+    super.key,
+    required this.masterId,
+    this.scrollToReviews = false,
+  });
 
   @override
   State<MasterDetailsPage> createState() => _MasterDetailsPageState();
@@ -16,6 +22,9 @@ class _MasterDetailsPageState extends State<MasterDetailsPage> {
   late Future<Map<String, dynamic>?> _masterFuture;
   late Future<List<Map<String, dynamic>>> _servicesFuture;
   late Future<List<Map<String, dynamic>>> _reviewsFuture;
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _reviewsSectionKey = GlobalKey();
+  bool _didAutoScrollToReviews = false;
   static const List<String> _monthsRu = [
     'января',
     'февраля',
@@ -70,6 +79,12 @@ class _MasterDetailsPageState extends State<MasterDetailsPage> {
   }
 
   @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
@@ -107,7 +122,23 @@ class _MasterDetailsPageState extends State<MasterDetailsPage> {
               final avgRating = ratings.isEmpty
                   ? null
                   : (ratings.reduce((a, b) => a + b) / ratings.length);
+              if (widget.scrollToReviews &&
+                  !_didAutoScrollToReviews &&
+                  reviewSnapshot.connectionState != ConnectionState.waiting) {
+                _didAutoScrollToReviews = true;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  final sectionContext = _reviewsSectionKey.currentContext;
+                  if (sectionContext == null || !mounted) return;
+                  Scrollable.ensureVisible(
+                    sectionContext,
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeOut,
+                    alignment: 0.05,
+                  );
+                });
+              }
               return CustomScrollView(
+                controller: _scrollController,
                 slivers: [
                   SliverAppBar(
                     expandedHeight: 210,
@@ -132,10 +163,11 @@ class _MasterDetailsPageState extends State<MasterDetailsPage> {
                       background: Stack(
                         fit: StackFit.expand,
                         children: [
-                          if (avatarUrl.isNotEmpty)
-                            Image.network(avatarUrl, fit: BoxFit.cover)
-                          else
-                            Container(color: const Color(0xFFAB7BEE)),
+                          SafeNetworkImage(
+                            url: avatarUrl,
+                            fit: BoxFit.cover,
+                            fallback: Container(color: const Color(0xFFAB7BEE)),
+                          ),
                           Container(color: Colors.black.withValues(alpha: 0.28)),
                           Positioned(
                             left: AppSpacing.lg,
@@ -316,7 +348,14 @@ class _MasterDetailsPageState extends State<MasterDetailsPage> {
                             },
                           ),
                           const SizedBox(height: AppSpacing.xl),
-                          Text('Отзывы', style: Theme.of(context).textTheme.titleLarge),
+                          Container(
+                            key: _reviewsSectionKey,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Отзывы',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                          ),
                           const SizedBox(height: AppSpacing.sm),
                           if (reviewSnapshot.connectionState ==
                               ConnectionState.waiting)

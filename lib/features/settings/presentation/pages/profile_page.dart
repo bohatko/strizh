@@ -10,6 +10,7 @@ import 'package:app_template/theme.dart';
 import 'package:app_template/core/ui/app_button.dart';
 import 'package:app_template/core/ui/app_text_field.dart';
 import 'package:app_template/core/ui/app_snackbar.dart';
+import 'package:app_template/core/ui/safe_network_image.dart';
 import 'package:app_template/supabase/supabase_config.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
@@ -388,14 +389,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           ),
                         ],
                       ),
-                      child: CircleAvatar(
+                      child: SafeNetworkAvatar(
+                        url: _avatarUrl,
+                        radius: 60,
                         backgroundColor: cs.surfaceContainerHighest.withValues(alpha: 0.4),
-                        backgroundImage: (_avatarUrl ?? '').isNotEmpty
-                            ? NetworkImage(_avatarUrl!)
-                            : null,
-                        child: (_avatarUrl ?? '').isEmpty
-                            ? const Icon(Icons.person, size: 48)
-                            : null,
+                        icon: Icons.person,
+                        iconSize: 48,
                       ),
                     ),
                     Positioned(
