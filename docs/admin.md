@@ -9,6 +9,21 @@ The master create/edit form opens as a modal bottom sheet with `32px` top paddin
 - **Create:** admins can pick a free profile. The list excludes profiles with role `user` and accounts already linked to another master.
 - **Edit:** the user account field is hidden; the existing `user_id` is kept on save.
 
+## Master portfolio (`works_images`)
+
+The `masters.works_images` column stores an array of image URLs shown in **Примеры работ** on `/masters/:id`.
+
+In the master create/edit form, admins can:
+
+- add a URL row with **Добавить ссылку**;
+- upload from device gallery with **Из галереи** (runtime gallery permission is requested first; file goes to the public `masters` Storage bucket, public URL is filled in automatically);
+- edit or remove rows;
+- see a small preview thumbnail while editing.
+
+Upload path pattern: `{masterId}/work_{timestamp}.{ext}` (or `draft/...` before the master is created).
+
+Saved URLs are written to `masters.works_images` on create and update.
+
 ## Service price and booking
 
 Booking reads the price from `master_services.price` (link between master and service), not only from `services.price`.

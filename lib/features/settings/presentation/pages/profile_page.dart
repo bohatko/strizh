@@ -10,6 +10,7 @@ import 'package:app_template/core/providers/theme_provider.dart';
 import 'package:app_template/theme.dart';
 import 'package:app_template/core/ui/app_button.dart';
 import 'package:app_template/core/ui/app_text_field.dart';
+import 'package:app_template/core/permissions/gallery_permission.dart';
 import 'package:app_template/core/ui/app_snackbar.dart';
 import 'package:app_template/core/ui/safe_network_image.dart';
 import 'package:app_template/nav.dart';
@@ -81,6 +82,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
 
     try {
+      if (!await GalleryPermission.ensureAccessWithFeedback(context)) {
+        return;
+      }
+
       final picker = ImagePicker();
       final picked = await picker.pickImage(
         source: ImageSource.gallery,

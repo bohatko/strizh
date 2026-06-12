@@ -1,3 +1,4 @@
+import 'package:app_template/core/permissions/gallery_permission.dart';
 import 'package:app_template/core/ui/admin_access_icon.dart';
 import 'package:app_template/core/ui/app_snackbar.dart';
 import 'package:app_template/core/ui/safe_network_image.dart';
@@ -7,6 +8,8 @@ import 'package:app_template/supabase/supabase_config.dart';
 import 'package:app_template/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 
 class AdminPanelPage extends ConsumerStatefulWidget {
   const AdminPanelPage({super.key});
@@ -66,7 +69,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
   Future<List<Map<String, dynamic>>> _loadMasters() async {
     return SupabaseService.select(
       'masters',
-      select: 'id, user_id, specialty, level, bio, avatar_url, created_at',
+      select:
+          'id, user_id, specialty, level, bio, avatar_url, works_images, created_at',
       orderBy: 'created_at',
       ascending: false,
     );
@@ -582,6 +586,70 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
     return result == true;
   }
 
+  List<String> _parseWorkImageUrls(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .map((item) => item.toString().trim())
+        .where((url) => url.isNotEmpty)
+        .toList();
+  }
+
+  String _extractImageExtension(String name) {
+    final dotIndex = name.lastIndexOf('.');
+    if (dotIndex == -1 || dotIndex == name.length - 1) return 'jpg';
+    return name.substring(dotIndex + 1).toLowerCase();
+  }
+
+  Future<String?> _pickAndUploadMasterWorkImage({
+    required BuildContext context,
+    int? masterId,
+  }) async {
+    if (!await GalleryPermission.ensureAccessWithFeedback(context)) {
+      return null;
+    }
+
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      maxHeight: 1600,
+      imageQuality: 88,
+    );
+    if (picked == null) return null;
+
+    final bytes = await picked.readAsBytes();
+    final ext = _extractImageExtension(picked.name);
+    final folder = masterId?.toString() ?? 'draft';
+    final fileName =
+        '$folder/work_${DateTime.now().millisecondsSinceEpoch}.$ext';
+
+    await SupabaseConfig.client.storage.from('masters').uploadBinary(
+          fileName,
+          bytes,
+          fileOptions: FileOptions(
+            upsert: false,
+            contentType: picked.mimeType ?? 'image/$ext',
+          ),
+        );
+
+    return SupabaseConfig.client.storage
+        .from('masters')
+        .getPublicUrl(fileName);
+  }
+
+  void _applyUploadedWorkImageUrl(
+    List<TextEditingController> controllers,
+    String url,
+  ) {
+    final emptyIndex =
+        controllers.indexWhere((controller) => controller.text.trim().isEmpty);
+    if (emptyIndex >= 0) {
+      controllers[emptyIndex].text = url;
+      return;
+    }
+    controllers.add(TextEditingController(text: url));
+  }
+
   Future<void> _openMasterForm({Map<String, dynamic>? initial}) async {
     final specialtyCtrl = TextEditingController(
       text: (initial?['specialty'] ?? '').toString(),
@@ -615,15 +683,31 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
     final initialSelectedServiceIds = initial == null
         ? <int>{}
         : await _loadServiceIdsForMaster(initial['id'] as int);
+    final workImageControllers = _parseWorkImageUrls(initial?['works_images'])
+        .map((url) => TextEditingController(text: url))
+        .toList();
+    if (workImageControllers.isEmpty) {
+      workImageControllers.add(TextEditingController());
+    }
+
+    void disposeWorkImageControllers() {
+      for (final controller in workImageControllers) {
+        controller.dispose();
+      }
+    }
+
     if (!mounted) {
       specialtyCtrl.dispose();
       levelCtrl.dispose();
       bioCtrl.dispose();
       avatarCtrl.dispose();
+      disposeWorkImageControllers();
       return;
     }
 
     final isEditingMaster = initial != null;
+    final masterIdForUpload = initial?['id'] as int?;
+    var isUploadingWorkImage = false;
 
     final result = await showModalBottomSheet<_MasterFormResult>(
       context: context,
@@ -721,6 +805,154 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
+                  'Примеры работ',
+                  style: Theme.of(sheetContext).textTheme.titleMedium,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Вставьте ссылку или загрузите фото из галереи — файл сохранится в Storage, а ссылка подставится автоматически.',
+                  style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                StatefulBuilder(
+                  builder: (context, setModalState) => Column(
+                    children: [
+                      for (var index = 0;
+                          index < workImageControllers.length;
+                          index++)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ClipRRect(
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.sm),
+                                child: SizedBox(
+                                  width: 56,
+                                  height: 56,
+                                  child: SafeNetworkImage(
+                                    url: workImageControllers[index]
+                                        .text
+                                        .trim(),
+                                    fit: BoxFit.cover,
+                                    fallback: ColoredBox(
+                                      color: cs.surfaceContainerHighest,
+                                      child: Icon(
+                                        Icons.image_outlined,
+                                        color: cs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: TextField(
+                                  controller: workImageControllers[index],
+                                  onChanged: (_) => setModalState(() {}),
+                                  decoration: InputDecoration(
+                                    labelText: 'Фото ${index + 1}',
+                                    hintText: 'https://...',
+                                    isDense: true,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Удалить',
+                                onPressed: workImageControllers.length == 1
+                                    ? () {
+                                        setModalState(() {
+                                          workImageControllers[index].clear();
+                                        });
+                                      }
+                                    : () {
+                                        setModalState(() {
+                                          workImageControllers[index]
+                                              .dispose();
+                                          workImageControllers.removeAt(index);
+                                        });
+                                      },
+                                icon: const Icon(Icons.delete_outline_rounded),
+                              ),
+                            ],
+                          ),
+                        ),
+                      Row(
+                        children: [
+                          TextButton.icon(
+                            onPressed: isUploadingWorkImage
+                                ? null
+                                : () {
+                                    setModalState(() {
+                                      workImageControllers
+                                          .add(TextEditingController());
+                                    });
+                                  },
+                            icon: const Icon(Icons.add_link_rounded),
+                            label: const Text('Добавить ссылку'),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          TextButton.icon(
+                            onPressed: isUploadingWorkImage
+                                ? null
+                                : () async {
+                                    setModalState(
+                                      () => isUploadingWorkImage = true,
+                                    );
+                                    try {
+                                      final url =
+                                          await _pickAndUploadMasterWorkImage(
+                                        context: sheetContext,
+                                        masterId: masterIdForUpload,
+                                      );
+                                      if (url == null) return;
+                                      setModalState(() {
+                                        _applyUploadedWorkImageUrl(
+                                          workImageControllers,
+                                          url,
+                                        );
+                                      });
+                                    } catch (e) {
+                                      if (sheetContext.mounted) {
+                                        AppSnackbar.showError(
+                                          sheetContext,
+                                          'Не удалось загрузить фото: $e',
+                                        );
+                                      }
+                                    } finally {
+                                      if (sheetContext.mounted) {
+                                        setModalState(
+                                          () => isUploadingWorkImage = false,
+                                        );
+                                      }
+                                    }
+                                  },
+                            icon: isUploadingWorkImage
+                                ? SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: cs.primary,
+                                    ),
+                                  )
+                                : const Icon(Icons.photo_library_outlined),
+                            label: Text(
+                              isUploadingWorkImage
+                                  ? 'Загрузка...'
+                                  : 'Из галереи',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
                   'Услуги мастера',
                   style: Theme.of(sheetContext).textTheme.titleMedium,
                 ),
@@ -769,10 +1001,16 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                       );
                       return;
                     }
+                    final workImageUrls = <String>[
+                      for (final controller in workImageControllers)
+                        if (controller.text.trim().isNotEmpty)
+                          controller.text.trim(),
+                    ];
                     Navigator.of(sheetContext).pop(
                       _MasterFormResult(
                         selectedServiceIds: selectedServiceIds,
                         selectedUserId: selectedUserId,
+                        workImageUrls: workImageUrls,
                       ),
                     );
                   },
@@ -795,6 +1033,7 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
       levelCtrl.dispose();
       bioCtrl.dispose();
       avatarCtrl.dispose();
+      disposeWorkImageControllers();
       return;
     }
 
@@ -805,12 +1044,14 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
       'bio': bioCtrl.text.trim().isEmpty ? null : bioCtrl.text.trim(),
       'avatar_url':
           avatarCtrl.text.trim().isEmpty ? null : avatarCtrl.text.trim(),
+      'works_images': result.workImageUrls,
     };
 
     specialtyCtrl.dispose();
     levelCtrl.dispose();
     bioCtrl.dispose();
     avatarCtrl.dispose();
+    disposeWorkImageControllers();
 
     await _runGuarded(() async {
       if (initial == null) {
@@ -1609,10 +1850,12 @@ class _MasterFormResult {
   const _MasterFormResult({
     required this.selectedServiceIds,
     required this.selectedUserId,
+    required this.workImageUrls,
   });
 
   final Set<int> selectedServiceIds;
   final String? selectedUserId;
+  final List<String> workImageUrls;
 }
 
 class _ServiceFormResult {

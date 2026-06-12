@@ -275,10 +275,10 @@ class _MasterDetailsPageState extends State<MasterDetailsPage> {
                                     child: Container(
                                       width: 140,
                                       color: cs.surfaceContainerHighest,
-                                      child: Image.network(
-                                        url,
+                                      child: SafeNetworkImage(
+                                        url: url,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => const Center(
+                                        fallback: const Center(
                                           child: Icon(Icons.broken_image_outlined),
                                         ),
                                       ),

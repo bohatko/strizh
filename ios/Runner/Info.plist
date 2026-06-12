@@ -46,7 +46,7 @@
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 		<key>NSPhotoLibraryUsageDescription</key>
-		<string>Photo Library permission is required to access photos and videos.</string>
+		<string>Доступ к галерее нужен, чтобы выбрать фото для профиля и примеров работ.</string>
 		<key>NSMicrophoneUsageDescription</key>
 		<string>Microphone permission is required to record audio.</string>
 		<key>NSCameraUsageDescription</key>
