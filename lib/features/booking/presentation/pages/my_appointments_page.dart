@@ -74,6 +74,7 @@ class _MyAppointmentsPageState extends ConsumerState<MyAppointmentsPage> {
         {'status': 'cancelled'},
         filters: {'id': appointmentId},
       );
+      await SupabaseService.releaseTimeSlotsForAppointment(appointmentId);
       setState(() {
         _appointmentsFuture = _loadAppointments();
       });
@@ -475,6 +476,7 @@ class _StatusPill extends StatelessWidget {
       'pending' => 'Ожидает',
       'completed' => 'Завершено',
       'cancelled' => 'Отменено',
+      'archived' => 'Архив',
       _ => status,
     };
     final color = switch (status) {
@@ -482,6 +484,7 @@ class _StatusPill extends StatelessWidget {
       'pending' => const Color(0xFF8A8441),
       'completed' => const Color(0xFF1F8A5A),
       'cancelled' => const Color(0xFFC3423F),
+      'archived' => const Color(0xFF6B7280),
       _ => const Color(0xFF6D4EA2),
     };
     return Container(

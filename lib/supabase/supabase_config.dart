@@ -147,6 +147,46 @@ class SupabaseService {
     }
   }
 
+  /// Frees time slots linked to a cancelled or archived appointment.
+  static Future<void> releaseTimeSlotsForAppointment(int appointmentId) async {
+    try {
+      final updated = await update(
+        'time_slots',
+        {'is_booked': false, 'appointment_id': null},
+        filters: {'appointment_id': appointmentId},
+      );
+      if (updated.isNotEmpty) return;
+
+      final appointment = await selectSingle(
+        'appointments',
+        select: 'master_id, appointment_time',
+        filters: {'id': appointmentId},
+      );
+      if (appointment == null) return;
+
+      final masterId = appointment['master_id'];
+      final appointmentTime = appointment['appointment_time'];
+      if (masterId is! int || appointmentTime == null) return;
+
+      await update(
+        'time_slots',
+        {'is_booked': false, 'appointment_id': null},
+        filters: {
+          'master_id': masterId,
+          'start_time': appointmentTime,
+        },
+      );
+    } catch (e) {
+      final message = _handleDatabaseError(
+        'releaseTimeSlotsForAppointment',
+        'time_slots',
+        e,
+      );
+      AppLogger.error(message, error: e);
+      rethrow;
+    }
+  }
+
   /// Get direct table reference for complex queries
   static SupabaseQueryBuilder from(String table) =>
       SupabaseConfig.client.from(table);

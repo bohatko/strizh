@@ -19,8 +19,8 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
-  late final PageController _promoPageController;
-  int _promoPage = 0;
+  late final Future<List<Map<String, dynamic>>> _popularServicesFuture;
+  late final Future<List<Map<String, dynamic>>> _mastersFuture;
 
   static const _promos = [
     _PromoData(
@@ -43,13 +43,8 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   void initState() {
     super.initState();
-    _promoPageController = PageController(viewportFraction: 0.94);
-  }
-
-  @override
-  void dispose() {
-    _promoPageController.dispose();
-    super.dispose();
+    _popularServicesFuture = _loadPopularServices();
+    _mastersFuture = _loadMasters();
   }
 
   Future<List<Map<String, dynamic>>> _loadPopularServices() async {
@@ -137,72 +132,9 @@ class _HomePageState extends ConsumerState<HomePage> {
               style: Theme.of(context).textTheme.bodyMedium?.withColor(cs.onSurfaceVariant),
             ),
             const SizedBox(height: AppSpacing.xl),
-            SizedBox(
-              height: 198,
-              child: PageView.builder(
-                controller: _promoPageController,
-                itemCount: _promos.length,
-                onPageChanged: (index) => setState(() => _promoPage = index),
-                itemBuilder: (context, index) {
-                  final promo = _promos[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.sm),
-                    child: Container(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [Color(0xFFB388FF), Color(0xFFAB7BEE)]),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            promo.badge,
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.85),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            promo.title,
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: cs.surface,
-                              foregroundColor: cs.primary,
-                            ),
-                            onPressed: () => context.go(isAuthed ? AppRoutes.booking : AppRoutes.login),
-                            child: Text(promo.buttonLabel),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(_promos.length, (index) {
-                final isActive = index == _promoPage;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  height: 6,
-                  width: isActive ? 18 : 6,
-                  decoration: BoxDecoration(
-                    color: isActive ? cs.primary : cs.onSurfaceVariant.withValues(alpha: 0.35),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                );
-              }),
+            _PromoCarousel(
+              promos: _promos,
+              isAuthed: isAuthed,
             ),
             const SizedBox(height: AppSpacing.xl),
             _SectionHeader(
@@ -211,7 +143,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             const SizedBox(height: AppSpacing.sm),
             FutureBuilder<List<Map<String, dynamic>>>(
-              future: _loadPopularServices(),
+              future: _popularServicesFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const _ServicesShimmerRow();
@@ -248,7 +180,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             const SizedBox(height: AppSpacing.sm),
             FutureBuilder<List<Map<String, dynamic>>>(
-              future: _loadMasters(),
+              future: _mastersFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const _MastersShimmerRow();
@@ -310,6 +242,115 @@ class _PromoData {
     required this.title,
     required this.buttonLabel,
   });
+}
+
+class _PromoCarousel extends StatefulWidget {
+  final List<_PromoData> promos;
+  final bool isAuthed;
+
+  const _PromoCarousel({
+    required this.promos,
+    required this.isAuthed,
+  });
+
+  @override
+  State<_PromoCarousel> createState() => _PromoCarouselState();
+}
+
+class _PromoCarouselState extends State<_PromoCarousel> {
+  late final PageController _pageController;
+  int _page = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.94);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 198,
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: widget.promos.length,
+            onPageChanged: (index) => setState(() => _page = index),
+            itemBuilder: (context, index) {
+              final promo = widget.promos[index];
+              return Padding(
+                padding: const EdgeInsets.only(right: AppSpacing.sm),
+                child: Container(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [Color(0xFFB388FF), Color(0xFFAB7BEE)]),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        promo.badge,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        promo.title,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: cs.surface,
+                          foregroundColor: cs.primary,
+                        ),
+                        onPressed: () => context.go(
+                          widget.isAuthed ? AppRoutes.booking : AppRoutes.login,
+                        ),
+                        child: Text(promo.buttonLabel),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(widget.promos.length, (index) {
+            final isActive = index == _page;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              height: 6,
+              width: isActive ? 18 : 6,
+              decoration: BoxDecoration(
+                color: isActive ? cs.primary : cs.onSurfaceVariant.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
 }
 
 class _SectionHeader extends StatelessWidget {

@@ -22,10 +22,21 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
     'confirmed',
     'completed',
     'cancelled',
+    'archived',
   ];
 
   late final TabController _tabController;
   bool _isBusy = false;
+  String? _appointmentStatusFilter;
+
+  static const _appointmentStatusFilters = <String?, String>{
+    null: 'Все',
+    'pending': 'Ожидает',
+    'confirmed': 'Подтверждено',
+    'completed': 'Завершено',
+    'cancelled': 'Отменено',
+    'archived': 'Архив',
+  };
   late Future<List<Map<String, dynamic>>> _mastersFuture;
   late Future<List<Map<String, dynamic>>> _servicesFuture;
   late Future<List<Map<String, dynamic>>> _appointmentsFuture;
@@ -64,7 +75,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
   Future<List<Map<String, dynamic>>> _loadServices() async {
     return SupabaseService.select(
       'services',
-      select: 'id, name, category, description, duration, price, image_url, created_at',
+      select:
+          'id, name, category, description, duration, price, image_url, created_at',
       orderBy: 'created_at',
       ascending: false,
     );
@@ -79,7 +91,34 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
         )
         .order('created_at', ascending: false)
         .order('id', ascending: false);
-    return List<Map<String, dynamic>>.from(rows);
+    final appointments = List<Map<String, dynamic>>.from(rows);
+    final clientIds = appointments
+        .map((item) => item['client_id'])
+        .whereType<String>()
+        .toSet();
+
+    if (clientIds.isEmpty) {
+      return appointments;
+    }
+
+    final profileRows = await SupabaseConfig.client
+        .from('profiles')
+        .select('id, display_name, first_name, last_name')
+        .inFilter('id', clientIds.toList());
+    final clientNames = <String, String>{
+      for (final profile in List<Map<String, dynamic>>.from(profileRows))
+        if (profile['id'] is String)
+          profile['id'] as String: _profileDisplayName(profile),
+    };
+
+    for (final item in appointments) {
+      final clientId = item['client_id'];
+      item['_client_name'] = clientId is String
+          ? (clientNames[clientId] ?? 'клиент')
+          : 'клиент';
+    }
+
+    return appointments;
   }
 
   Future<List<Map<String, dynamic>>> _loadReviews() async {
@@ -93,21 +132,23 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
     return List<Map<String, dynamic>>.from(rows);
   }
 
-  Future<List<Map<String, dynamic>>> _loadMasterUsers({String? includeUserId}) async {
+  Future<List<Map<String, dynamic>>> _loadMasterUsers(
+      {String? includeUserId}) async {
     final profiles = await SupabaseService.select(
       'profiles',
-      select: 'id, email, display_name, first_name, last_name, created_at',
+      select:
+          'id, email, display_name, first_name, last_name, role, created_at',
       orderBy: 'created_at',
       ascending: false,
     );
     final masters = await SupabaseService.select('masters', select: 'user_id');
-    final usedIds = masters
-        .map((row) => row['user_id'])
-        .whereType<String>()
-        .toSet();
+    final usedIds =
+        masters.map((row) => row['user_id']).whereType<String>().toSet();
     return profiles.where((profile) {
       final id = profile['id'];
       if (id is! String) return false;
+      final role = (profile['role'] ?? '').toString().trim().toLowerCase();
+      if (role == 'user') return false;
       if (includeUserId != null && includeUserId == id) return true;
       return !usedIds.contains(id);
     }).toList();
@@ -133,7 +174,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
 
     final completedAppointments = await SupabaseConfig.client
         .from('appointments')
-        .select('id, client_id, master_id, appointment_time, services(name), masters(specialty)')
+        .select(
+            'id, client_id, master_id, appointment_time, services(name), masters(specialty)')
         .eq('status', 'completed')
         .order('appointment_time', ascending: false);
     final appointments = List<Map<String, dynamic>>.from(completedAppointments);
@@ -154,7 +196,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
               left: AppSpacing.lg,
               right: AppSpacing.lg,
               top: AppSpacing.lg,
-              bottom: MediaQuery.of(sheetContext).viewInsets.bottom + AppSpacing.lg,
+              bottom:
+                  MediaQuery.of(sheetContext).viewInsets.bottom + AppSpacing.lg,
             ),
             child: SingleChildScrollView(
               child: Column(
@@ -169,9 +212,10 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                   if (appointments.isEmpty)
                     Text(
                       'Нет завершённых заказов для создания отзыва.',
-                      style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
+                      style:
+                          Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                                color: cs.onSurfaceVariant,
+                              ),
                     )
                   else
                     DropdownButtonFormField<int>(
@@ -183,7 +227,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                       items: appointments.map((row) {
                         final id = row['id'] as int?;
                         final masters = row['masters'] as Map<String, dynamic>?;
-                        final services = row['services'] as Map<String, dynamic>?;
+                        final services =
+                            row['services'] as Map<String, dynamic>?;
                         final dt = DateTime.tryParse(
                           (row['appointment_time'] ?? '').toString(),
                         );
@@ -260,7 +305,9 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
       return;
     }
 
-    final chosen = appointments.where((row) => row['id'] == selectedAppointmentId).toList();
+    final chosen = appointments
+        .where((row) => row['id'] == selectedAppointmentId)
+        .toList();
     if (chosen.isEmpty) {
       textCtrl.dispose();
       return;
@@ -290,10 +337,7 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
       select: 'service_id',
       filters: {'master_id': masterId},
     );
-    return rows
-        .map((row) => row['service_id'])
-        .whereType<int>()
-        .toSet();
+    return rows.map((row) => row['service_id']).whereType<int>().toSet();
   }
 
   Future<Set<int>> _loadMasterIdsForService(int serviceId) async {
@@ -302,10 +346,7 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
       select: 'master_id',
       filters: {'service_id': serviceId},
     );
-    return rows
-        .map((row) => row['master_id'])
-        .whereType<int>()
-        .toSet();
+    return rows.map((row) => row['master_id']).whereType<int>().toSet();
   }
 
   Future<void> _syncMasterServiceLinksForMaster({
@@ -330,18 +371,30 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
 
     for (final entry in existingByServiceId.entries) {
       if (!selectedServiceIds.contains(entry.key)) {
-        await SupabaseService.delete('master_services', filters: {'id': entry.value});
+        await SupabaseService.delete('master_services',
+            filters: {'id': entry.value});
       }
     }
 
     for (final serviceId in selectedServiceIds) {
-      if (existingByServiceId.containsKey(serviceId)) continue;
       final service = servicesById[serviceId];
+      final linkPayload = <String, dynamic>{
+        'price': service?['price'],
+        'duration': service?['duration'],
+      };
+      final existingLinkId = existingByServiceId[serviceId];
+      if (existingLinkId != null) {
+        await SupabaseService.update(
+          'master_services',
+          linkPayload,
+          filters: {'id': existingLinkId},
+        );
+        continue;
+      }
       await SupabaseService.insert('master_services', {
         'master_id': masterId,
         'service_id': serviceId,
-        'price': service?['price'],
-        'duration': service?['duration'],
+        ...linkPayload,
       });
     }
   }
@@ -369,17 +422,29 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
 
     for (final entry in existingByMasterId.entries) {
       if (!selectedMasterIds.contains(entry.key)) {
-        await SupabaseService.delete('master_services', filters: {'id': entry.value});
+        await SupabaseService.delete('master_services',
+            filters: {'id': entry.value});
       }
     }
 
     for (final masterId in selectedMasterIds) {
-      if (existingByMasterId.containsKey(masterId)) continue;
+      final linkPayload = <String, dynamic>{
+        'price': price,
+        'duration': duration,
+      };
+      final existingLinkId = existingByMasterId[masterId];
+      if (existingLinkId != null) {
+        await SupabaseService.update(
+          'master_services',
+          linkPayload,
+          filters: {'id': existingLinkId},
+        );
+        continue;
+      }
       await SupabaseService.insert('master_services', {
         'master_id': masterId,
         'service_id': serviceId,
-        'price': price,
-        'duration': duration,
+        ...linkPayload,
       });
     }
   }
@@ -419,9 +484,50 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
         {'status': newStatus},
         filters: {'id': appointmentId},
       );
+      if (newStatus == 'cancelled' || newStatus == 'archived') {
+        await SupabaseService.releaseTimeSlotsForAppointment(appointmentId);
+      }
       if (!mounted) return;
-      AppSnackbar.showSuccess(context, 'Статус заказа обновлён');
+      final message = newStatus == 'archived'
+          ? 'Заказ архивирован'
+          : 'Статус заказа обновлён';
+      AppSnackbar.showSuccess(context, message);
     });
+  }
+
+  Widget _buildAppointmentStatusFilter(ColorScheme cs) {
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _appointmentStatusFilters.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final entry = _appointmentStatusFilters.entries.elementAt(index);
+          final isActive = _appointmentStatusFilter == entry.key;
+          return FilterChip(
+            label: Text(entry.value),
+            selected: isActive,
+            showCheckmark: false,
+            labelStyle: TextStyle(
+              color: isActive ? cs.onPrimaryContainer : cs.onSurface,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+            selectedColor: cs.primaryContainer,
+            backgroundColor: cs.surfaceContainerHighest.withValues(alpha: 0.45),
+            side: BorderSide(
+              color: isActive
+                  ? cs.primary.withValues(alpha: 0.35)
+                  : cs.outline.withValues(alpha: 0.2),
+            ),
+            onSelected: _isBusy
+                ? null
+                : (_) => setState(() => _appointmentStatusFilter = entry.key),
+          );
+        },
+      ),
+    );
   }
 
   Future<void> _deleteMaster(int id) async {
@@ -490,12 +596,18 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
       text: (initial?['avatar_url'] ?? '').toString(),
     );
     final initialUserId = initial?['user_id'];
-    String? selectedUserId = initialUserId is String && initialUserId.trim().isNotEmpty
-        ? initialUserId.trim()
-        : null;
+    String? selectedUserId =
+        initialUserId is String && initialUserId.trim().isNotEmpty
+            ? initialUserId.trim()
+            : null;
 
     final availableServices = await _loadServices();
-    final availableUsers = await _loadMasterUsers(includeUserId: selectedUserId);
+    final availableUsers =
+        await _loadMasterUsers(includeUserId: selectedUserId);
+    if (selectedUserId != null &&
+        !availableUsers.any((user) => user['id'] == selectedUserId)) {
+      selectedUserId = null;
+    }
     final servicesById = <int, Map<String, dynamic>>{
       for (final item in availableServices)
         if (item['id'] is int) item['id'] as int: item,
@@ -511,6 +623,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
       return;
     }
 
+    final isEditingMaster = initial != null;
+
     final result = await showModalBottomSheet<_MasterFormResult>(
       context: context,
       isScrollControlled: true,
@@ -521,8 +635,9 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
           padding: EdgeInsets.only(
             left: AppSpacing.lg,
             right: AppSpacing.lg,
-            top: AppSpacing.lg,
-            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + AppSpacing.lg,
+            top: 32,
+            bottom:
+                MediaQuery.of(sheetContext).viewInsets.bottom + AppSpacing.lg,
           ),
           child: SingleChildScrollView(
             child: Column(
@@ -541,40 +656,52 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                     hintText: 'Например: Мария',
                   ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                StatefulBuilder(
-                  builder: (context, setModalState) => DropdownButtonFormField<String>(
-                    initialValue: selectedUserId,
-                    decoration: const InputDecoration(
-                      labelText: 'Аккаунт пользователя',
-                      border: OutlineInputBorder(),
+                if (!isEditingMaster) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  StatefulBuilder(
+                    builder: (context, setModalState) =>
+                        DropdownButtonFormField<String>(
+                      value: selectedUserId,
+                      decoration: const InputDecoration(
+                        labelText: 'Аккаунт пользователя',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: availableUsers
+                          .map((user) {
+                            final id = user['id'];
+                            if (id is! String) return null;
+                            final displayName =
+                                (user['display_name'] ?? '').toString().trim();
+                            final firstName =
+                                (user['first_name'] ?? '').toString().trim();
+                            final lastName =
+                                (user['last_name'] ?? '').toString().trim();
+                            final email =
+                                (user['email'] ?? '').toString().trim();
+                            final fullName = '$firstName $lastName'.trim();
+                            final label = displayName.isNotEmpty
+                                ? displayName
+                                : (fullName.isNotEmpty
+                                    ? fullName
+                                    : (email.isNotEmpty ? email : id));
+                            return DropdownMenuItem<String>(
+                              value: id,
+                              child: Text(
+                                label,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          })
+                          .whereType<DropdownMenuItem<String>>()
+                          .toList(),
+                      onChanged: (value) {
+                        setModalState(() {
+                          selectedUserId = value;
+                        });
+                      },
                     ),
-                    items: availableUsers.map((user) {
-                      final id = user['id'];
-                      if (id is! String) return null;
-                      final displayName = (user['display_name'] ?? '').toString().trim();
-                      final firstName = (user['first_name'] ?? '').toString().trim();
-                      final lastName = (user['last_name'] ?? '').toString().trim();
-                      final email = (user['email'] ?? '').toString().trim();
-                      final fullName = '$firstName $lastName'.trim();
-                      final label = displayName.isNotEmpty
-                          ? displayName
-                          : (fullName.isNotEmpty ? fullName : (email.isNotEmpty ? email : id));
-                      return DropdownMenuItem<String>(
-                        value: id,
-                        child: Text(
-                          label,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      );
-                    }).whereType<DropdownMenuItem<String>>().toList(),
-                    onChanged: (value) {
-                      setModalState(() {
-                        selectedUserId = value;
-                      });
-                    },
                   ),
-                ),
+                ],
                 const SizedBox(height: AppSpacing.sm),
                 TextField(
                   controller: levelCtrl,
@@ -601,9 +728,10 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                 if (availableServices.isEmpty)
                   Text(
                     'Сначала добавьте услуги, чтобы назначить их мастеру.',
-                    style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
+                    style:
+                        Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
                   )
                 else
                   StatefulBuilder(
@@ -613,7 +741,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                       children: availableServices.map((service) {
                         final serviceId = service['id'];
                         if (serviceId is! int) return const SizedBox.shrink();
-                        final label = (service['name'] ?? 'Услуга #$serviceId').toString();
+                        final label = (service['name'] ?? 'Услуга #$serviceId')
+                            .toString();
                         return FilterChip(
                           label: Text(label),
                           selected: selectedServiceIds.contains(serviceId),
@@ -674,7 +803,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
       'specialty': specialtyCtrl.text.trim(),
       'level': levelCtrl.text.trim().isEmpty ? null : levelCtrl.text.trim(),
       'bio': bioCtrl.text.trim().isEmpty ? null : bioCtrl.text.trim(),
-      'avatar_url': avatarCtrl.text.trim().isEmpty ? null : avatarCtrl.text.trim(),
+      'avatar_url':
+          avatarCtrl.text.trim().isEmpty ? null : avatarCtrl.text.trim(),
     };
 
     specialtyCtrl.dispose();
@@ -685,7 +815,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
     await _runGuarded(() async {
       if (initial == null) {
         final inserted = await SupabaseService.insert('masters', payload);
-        final insertedMasterId = inserted.isNotEmpty ? inserted.first['id'] : null;
+        final insertedMasterId =
+            inserted.isNotEmpty ? inserted.first['id'] : null;
         if (insertedMasterId is int) {
           await _syncMasterServiceLinksForMaster(
             masterId: insertedMasterId,
@@ -757,7 +888,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
             left: AppSpacing.lg,
             right: AppSpacing.lg,
             top: AppSpacing.lg,
-            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + AppSpacing.lg,
+            bottom:
+                MediaQuery.of(sheetContext).viewInsets.bottom + AppSpacing.lg,
           ),
           child: SingleChildScrollView(
             child: Column(
@@ -789,18 +921,21 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                 TextField(
                   controller: durationCtrl,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Длительность (мин)'),
+                  decoration:
+                      const InputDecoration(labelText: 'Длительность (мин)'),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 TextField(
                   controller: priceCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(labelText: 'Цена'),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 TextField(
                   controller: imageCtrl,
-                  decoration: const InputDecoration(labelText: 'URL изображения'),
+                  decoration:
+                      const InputDecoration(labelText: 'URL изображения'),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
@@ -811,9 +946,10 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                 if (availableMasters.isEmpty)
                   Text(
                     'Сначала добавьте мастеров, чтобы назначить им услугу.',
-                    style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
+                    style:
+                        Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
                   )
                 else
                   StatefulBuilder(
@@ -823,7 +959,9 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                       children: availableMasters.map((master) {
                         final masterId = master['id'];
                         if (masterId is! int) return const SizedBox.shrink();
-                        final label = (master['specialty'] ?? 'Мастер #$masterId').toString();
+                        final label =
+                            (master['specialty'] ?? 'Мастер #$masterId')
+                                .toString();
                         return FilterChip(
                           label: Text(label),
                           selected: selectedMasterIds.contains(masterId),
@@ -844,7 +982,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                 FilledButton.icon(
                   onPressed: () {
                     if (nameCtrl.text.trim().isEmpty) {
-                      AppSnackbar.showError(sheetContext, 'Поле "Название" обязательно');
+                      AppSnackbar.showError(
+                          sheetContext, 'Поле "Название" обязательно');
                       return;
                     }
                     Navigator.of(sheetContext).pop(
@@ -879,9 +1018,11 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
     final parsedPrice = num.tryParse(priceCtrl.text.trim());
     final payload = <String, dynamic>{
       'name': nameCtrl.text.trim(),
-      'category': categoryCtrl.text.trim().isEmpty ? null : categoryCtrl.text.trim(),
-      'description':
-          descriptionCtrl.text.trim().isEmpty ? null : descriptionCtrl.text.trim(),
+      'category':
+          categoryCtrl.text.trim().isEmpty ? null : categoryCtrl.text.trim(),
+      'description': descriptionCtrl.text.trim().isEmpty
+          ? null
+          : descriptionCtrl.text.trim(),
       'duration': parsedDuration,
       'price': parsedPrice,
       'image_url': imageCtrl.text.trim().isEmpty ? null : imageCtrl.text.trim(),
@@ -897,7 +1038,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
     await _runGuarded(() async {
       if (initial == null) {
         final inserted = await SupabaseService.insert('services', payload);
-        final insertedServiceId = inserted.isNotEmpty ? inserted.first['id'] : null;
+        final insertedServiceId =
+            inserted.isNotEmpty ? inserted.first['id'] : null;
         if (insertedServiceId is int) {
           await _syncMasterServiceLinksForService(
             serviceId: insertedServiceId,
@@ -938,7 +1080,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.lock_outline_rounded, size: 48, color: cs.onSurfaceVariant),
+                Icon(Icons.lock_outline_rounded,
+                    size: 48, color: cs.onSurfaceVariant),
                 const SizedBox(height: AppSpacing.md),
                 Text(
                   'Доступ запрещён. Раздел доступен только администраторам.',
@@ -979,7 +1122,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                 return Center(
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Text('Не удалось загрузить мастеров: ${snapshot.error}'),
+                    child: Text(
+                        'Не удалось загрузить мастеров: ${snapshot.error}'),
                   ),
                 );
               }
@@ -995,7 +1139,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                   110,
                 ),
                 itemCount: masters.length,
-                separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: AppSpacing.sm),
                 itemBuilder: (context, index) {
                   final item = masters[index];
                   return Container(
@@ -1012,13 +1157,16 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                         iconSize: 20,
                       ),
                       title: Text((item['specialty'] ?? 'Мастер').toString()),
-                      subtitle: Text((item['level'] ?? 'Уровень не указан').toString()),
+                      subtitle: Text(
+                          (item['level'] ?? 'Уровень не указан').toString()),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
                             tooltip: 'Редактировать',
-                            onPressed: _isBusy ? null : () => _openMasterForm(initial: item),
+                            onPressed: _isBusy
+                                ? null
+                                : () => _openMasterForm(initial: item),
                             icon: const Icon(Icons.edit_outlined),
                           ),
                           IconButton(
@@ -1051,7 +1199,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                 return Center(
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Text('Не удалось загрузить услуги: ${snapshot.error}'),
+                    child:
+                        Text('Не удалось загрузить услуги: ${snapshot.error}'),
                   ),
                 );
               }
@@ -1067,7 +1216,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                   110,
                 ),
                 itemCount: services.length,
-                separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: AppSpacing.sm),
                 itemBuilder: (context, index) {
                   final item = services[index];
                   final rawPrice = item['price'];
@@ -1089,7 +1239,9 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                         children: [
                           IconButton(
                             tooltip: 'Редактировать',
-                            onPressed: _isBusy ? null : () => _openServiceForm(initial: item),
+                            onPressed: _isBusy
+                                ? null
+                                : () => _openServiceForm(initial: item),
                             icon: const Icon(Icons.edit_outlined),
                           ),
                           IconButton(
@@ -1122,7 +1274,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                 return Center(
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Text('Не удалось загрузить заказы: ${snapshot.error}'),
+                    child:
+                        Text('Не удалось загрузить заказы: ${snapshot.error}'),
                   ),
                 );
               }
@@ -1130,113 +1283,174 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
               if (appointments.isEmpty) {
                 return const Center(child: Text('Заказы пока не созданы.'));
               }
-              return ListView.separated(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.md,
-                  AppSpacing.lg,
-                  AppSpacing.xl,
-                ),
-                itemCount: appointments.length,
-                separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-                itemBuilder: (context, index) {
-                  final item = appointments[index];
-                  final appointmentId = item['id'];
-                  final rawStatus = (item['status'] ?? 'pending').toString();
-                  final status = _appointmentStatuses.contains(rawStatus)
-                      ? rawStatus
-                      : 'pending';
-                  final appointmentTime = DateTime.tryParse(
-                    (item['appointment_time'] ?? '').toString(),
-                  );
-                  final masters = item['masters'] as Map<String, dynamic>?;
-                  final services = item['services'] as Map<String, dynamic>?;
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: cs.surfaceContainerHighest.withValues(alpha: 0.45),
-                      borderRadius: BorderRadius.circular(AppRadius.lg),
+              final filtered = _appointmentStatusFilter == null
+                  ? appointments
+                  : appointments
+                      .where(
+                        (item) =>
+                            (item['status'] ?? '').toString() ==
+                            _appointmentStatusFilter,
+                      )
+                      .toList();
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      0,
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  'Заказ #${item['id']}',
-                                  style: Theme.of(context).textTheme.titleMedium,
+                    child: _buildAppointmentStatusFilter(cs),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Expanded(
+                    child: filtered.isEmpty
+                        ? const Center(
+                            child: Text('Нет заказов с выбранным статусом.'),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.lg,
+                              AppSpacing.md,
+                              AppSpacing.lg,
+                              AppSpacing.xl,
+                            ),
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: AppSpacing.sm),
+                            itemBuilder: (context, index) {
+                              final item = filtered[index];
+                              final appointmentId = item['id'];
+                              final rawStatus =
+                                  (item['status'] ?? 'pending').toString();
+                              final status =
+                                  _appointmentStatuses.contains(rawStatus)
+                                      ? rawStatus
+                                      : 'pending';
+                              final appointmentTime = DateTime.tryParse(
+                                (item['appointment_time'] ?? '').toString(),
+                              );
+                              final masters =
+                                  item['masters'] as Map<String, dynamic>?;
+                              final services =
+                                  item['services'] as Map<String, dynamic>?;
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: cs.surfaceContainerHighest
+                                      .withValues(alpha: 0.45),
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.lg),
                                 ),
-                              ),
-                              _StatusBadge(status: status),
-                            ],
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
-                            'Услуга: ${(services?['name'] ?? '—').toString()}',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Мастер: ${(masters?['specialty'] ?? '—').toString()}',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Клиент: ${(item['client_id'] ?? '—').toString()}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Время: ${_dateTimeLabel(appointmentTime)}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          Row(
-                            children: [
-                              Text(
-                                'Статус:',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Expanded(
-                                child: DropdownButtonFormField<String>(
-                                  initialValue: status,
-                                  decoration: const InputDecoration(
-                                    isDense: true,
-                                    border: OutlineInputBorder(),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(AppSpacing.md),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              'Заказ #${item['id']}',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleMedium,
+                                            ),
+                                          ),
+                                          _StatusBadge(status: status),
+                                        ],
+                                      ),
+                                      const SizedBox(height: AppSpacing.sm),
+                                      Text(
+                                        'Услуга: ${(services?['name'] ?? '—').toString()}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Мастер: ${(masters?['specialty'] ?? '—').toString()}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Клиент: ${(item['_client_name'] ?? 'клиент').toString()}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: cs.onSurfaceVariant,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Время: ${_dateTimeLabel(appointmentTime)}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: cs.onSurfaceVariant,
+                                            ),
+                                      ),
+                                      const SizedBox(height: AppSpacing.md),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            'Статус:',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium,
+                                          ),
+                                          const SizedBox(width: AppSpacing.sm),
+                                          Expanded(
+                                            child:
+                                                DropdownButtonFormField<String>(
+                                              value: status,
+                                              decoration: const InputDecoration(
+                                                isDense: true,
+                                                border: OutlineInputBorder(),
+                                              ),
+                                              items: _appointmentStatuses
+                                                  .map(
+                                                    (value) => DropdownMenuItem<
+                                                        String>(
+                                                      value: value,
+                                                      child: Text(
+                                                          _statusLabel(value)),
+                                                    ),
+                                                  )
+                                                  .toList(),
+                                              onChanged: _isBusy ||
+                                                      appointmentId is! int
+                                                  ? null
+                                                  : (value) {
+                                                      if (value == null ||
+                                                          value == status) {
+                                                        return;
+                                                      }
+                                                      _updateAppointmentStatus(
+                                                        appointmentId:
+                                                            appointmentId,
+                                                        newStatus: value,
+                                                      );
+                                                    },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
-                                  items: _appointmentStatuses
-                                      .map(
-                                        (value) => DropdownMenuItem<String>(
-                                          value: value,
-                                          child: Text(_statusLabel(value)),
-                                        ),
-                                      )
-                                      .toList(),
-                                  onChanged: _isBusy || appointmentId is! int
-                                      ? null
-                                      : (value) {
-                                          if (value == null || value == status) return;
-                                          _updateAppointmentStatus(
-                                            appointmentId: appointmentId,
-                                            newStatus: value,
-                                          );
-                                        },
                                 ),
-                              ),
-                            ],
+                              );
+                            },
                           ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+                  ),
+                ],
               );
             },
           ),
@@ -1250,7 +1464,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                 return Center(
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Text('Не удалось загрузить отзывы: ${snapshot.error}'),
+                    child:
+                        Text('Не удалось загрузить отзывы: ${snapshot.error}'),
                   ),
                 );
               }
@@ -1266,13 +1481,17 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                   AppSpacing.xl,
                 ),
                 itemCount: reviews.length,
-                separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: AppSpacing.sm),
                 itemBuilder: (context, index) {
                   final item = reviews[index];
                   final masters = item['masters'] as Map<String, dynamic>?;
-                  final appointment = item['appointments'] as Map<String, dynamic>?;
-                  final services = appointment?['services'] as Map<String, dynamic>?;
-                  final createdAt = DateTime.tryParse((item['created_at'] ?? '').toString());
+                  final appointment =
+                      item['appointments'] as Map<String, dynamic>?;
+                  final services =
+                      appointment?['services'] as Map<String, dynamic>?;
+                  final createdAt =
+                      DateTime.tryParse((item['created_at'] ?? '').toString());
                   final rating = item['rating'];
                   final text = (item['text'] ?? '').toString();
                   return Container(
@@ -1290,28 +1509,33 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                               Expanded(
                                 child: Text(
                                   'Отзыв #${item['id']}',
-                                  style: Theme.of(context).textTheme.titleMedium,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
                                 ),
                               ),
                               if (rating is num)
                                 Text(
                                   '⭐ ${rating.toString()}',
-                                  style: Theme.of(context).textTheme.titleMedium,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
                                 ),
                             ],
                           ),
                           const SizedBox(height: AppSpacing.sm),
-                          Text('Мастер: ${(masters?['specialty'] ?? '—').toString()}'),
+                          Text(
+                              'Мастер: ${(masters?['specialty'] ?? '—').toString()}'),
                           const SizedBox(height: 4),
-                          Text('Услуга: ${(services?['name'] ?? '—').toString()}'),
+                          Text(
+                              'Услуга: ${(services?['name'] ?? '—').toString()}'),
                           const SizedBox(height: 4),
                           Text('Заказ: #${item['appointment_id'] ?? '—'}'),
                           const SizedBox(height: 4),
                           Text(
                             'Дата: ${_dateTimeLabel(createdAt)}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: cs.onSurfaceVariant,
+                                    ),
                           ),
                           if (text.isNotEmpty) ...[
                             const SizedBox(height: AppSpacing.sm),
@@ -1334,7 +1558,8 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
                                     },
                               icon: const Icon(Icons.delete_outline),
                               label: const Text('Удалить'),
-                              style: TextButton.styleFrom(foregroundColor: Colors.red),
+                              style: TextButton.styleFrom(
+                                  foregroundColor: Colors.red),
                             ),
                           ),
                         ],
@@ -1350,28 +1575,32 @@ class _AdminPanelPageState extends ConsumerState<AdminPanelPage>
       floatingActionButton: _tabController.index == 2
           ? null
           : _tabController.index == 3
-          ? FloatingActionButton.extended(
-              onPressed: _isBusy ? null : _openReviewForm,
-              icon: const Icon(Icons.rate_review_outlined),
-              label: const Text('Добавить отзыв'),
-            )
-          : FloatingActionButton.extended(
-              onPressed: _isBusy
-                  ? null
-                  : () {
-                      if (_tabController.index == 0) {
-                        _openMasterForm();
-                      } else {
-                        _openServiceForm();
-                      }
-                    },
-              icon: Icon(
-                _tabController.index == 0 ? Icons.person_add_alt : Icons.add_box_outlined,
-              ),
-              label: Text(
-                _tabController.index == 0 ? 'Добавить мастера' : 'Добавить услугу',
-              ),
-            ),
+              ? FloatingActionButton.extended(
+                  onPressed: _isBusy ? null : _openReviewForm,
+                  icon: const Icon(Icons.rate_review_outlined),
+                  label: const Text('Добавить отзыв'),
+                )
+              : FloatingActionButton.extended(
+                  onPressed: _isBusy
+                      ? null
+                      : () {
+                          if (_tabController.index == 0) {
+                            _openMasterForm();
+                          } else {
+                            _openServiceForm();
+                          }
+                        },
+                  icon: Icon(
+                    _tabController.index == 0
+                        ? Icons.person_add_alt
+                        : Icons.add_box_outlined,
+                  ),
+                  label: Text(
+                    _tabController.index == 0
+                        ? 'Добавить мастера'
+                        : 'Добавить услугу',
+                  ),
+                ),
     );
   }
 }
@@ -1405,6 +1634,7 @@ class _StatusBadge extends StatelessWidget {
       'pending' => const Color(0xFF8A8441),
       'completed' => const Color(0xFF1F8A5A),
       'cancelled' => const Color(0xFFC3423F),
+      'archived' => const Color(0xFF6B7280),
       _ => cs.primary,
     };
     return Container(
@@ -1425,13 +1655,26 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
+String _profileDisplayName(Map<String, dynamic> profile) {
+  final displayName = (profile['display_name'] ?? '').toString().trim();
+  if (displayName.isNotEmpty) return displayName;
+
+  final firstName = (profile['first_name'] ?? '').toString().trim();
+  final lastName = (profile['last_name'] ?? '').toString().trim();
+  final fullName = '$firstName $lastName'.trim();
+  if (fullName.isNotEmpty) return fullName;
+
+  return 'клиент';
+}
+
 String _statusLabel(String status) => switch (status) {
-  'confirmed' => 'Подтверждено',
-  'pending' => 'Ожидает',
-  'completed' => 'Завершено',
-  'cancelled' => 'Отменено',
-  _ => status,
-};
+      'confirmed' => 'Подтверждено',
+      'pending' => 'Ожидает',
+      'completed' => 'Завершено',
+      'cancelled' => 'Отменено',
+      'archived' => 'Архив',
+      _ => status,
+    };
 
 String _dateTimeLabel(DateTime? dt) {
   if (dt == null) return 'Без даты';

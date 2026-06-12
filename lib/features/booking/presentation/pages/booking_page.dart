@@ -63,7 +63,7 @@ class _BookingPageState extends ConsumerState<BookingPage> {
     if (masterId != null) {
       query = query.eq('master_id', masterId);
     }
-    query = query.order('start_time', ascending: true).limit(200);
+    query = query.order('start_time', ascending: true).limit(2000);
     final result = await query;
     return List<Map<String, dynamic>>.from(result);
   }
@@ -531,22 +531,26 @@ class _BookingPageState extends ConsumerState<BookingPage> {
     List<String> dateKeys,
     List<Map<String, dynamic>> allSlots,
   ) {
+    final previousDateKey = _selectedDateKey;
+
     if (_selectedDateKey == null || !dateKeys.contains(_selectedDateKey)) {
       _selectedDateKey = dateKeys.isEmpty ? null : dateKeys.first;
       _selectedSlotId = null;
     }
+
     if (dateKeys.isEmpty) {
       _visibleMonth = null;
     } else {
-      final selectedDate = DateTime.tryParse(_selectedDateKey ?? '');
-      _visibleMonth ??= DateTime(
-        selectedDate?.year ?? DateTime.now().year,
-        selectedDate?.month ?? DateTime.now().month,
-      );
-      if (selectedDate != null) {
-        _visibleMonth = DateTime(selectedDate.year, selectedDate.month);
+      final selectionChanged = _selectedDateKey != previousDateKey;
+      if (_visibleMonth == null || selectionChanged) {
+        final selectedDate = DateTime.tryParse(_selectedDateKey ?? '');
+        _visibleMonth = DateTime(
+          selectedDate?.year ?? DateTime.now().year,
+          selectedDate?.month ?? DateTime.now().month,
+        );
       }
     }
+
     if (_selectedSlotId != null) {
       final hasSlot = allSlots.any((slot) => slot['id'] == _selectedSlotId);
       if (!hasSlot) _selectedSlotId = null;

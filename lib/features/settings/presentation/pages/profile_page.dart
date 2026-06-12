@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import 'package:app_template/core/ui/admin_access_icon.dart';
@@ -11,6 +12,7 @@ import 'package:app_template/core/ui/app_button.dart';
 import 'package:app_template/core/ui/app_text_field.dart';
 import 'package:app_template/core/ui/app_snackbar.dart';
 import 'package:app_template/core/ui/safe_network_image.dart';
+import 'package:app_template/nav.dart';
 import 'package:app_template/supabase/supabase_config.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
@@ -238,6 +240,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
     try {
       await ref.read(authControllerProvider.notifier).signOut();
+      if (!mounted) return;
+      context.go(AppRoutes.login);
     } catch (e) {
       if (!mounted) return;
       AppSnackbar.showError(context, e.toString());
@@ -322,6 +326,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
     try {
       await ref.read(authControllerProvider.notifier).deleteAccount();
+      if (!mounted) return;
+      context.go(AppRoutes.login);
     } catch (e) {
       if (!mounted) return;
       AppSnackbar.showError(context, e.toString());

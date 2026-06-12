@@ -193,6 +193,7 @@ class RouterRefreshNotifier extends ChangeNotifier {
 final routerRefreshNotifierProvider = Provider<RouterRefreshNotifier>((ref) {
   final notifier = RouterRefreshNotifier();
   ref.listen(authStateStreamProvider, (_, __) => notifier.refresh());
+  ref.listen(authControllerProvider, (_, __) => notifier.refresh());
   ref.onDispose(notifier.dispose);
   return notifier;
 });
